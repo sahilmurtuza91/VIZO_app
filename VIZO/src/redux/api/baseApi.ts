@@ -2,12 +2,14 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { Platform } from 'react-native';
 import { RootState } from '../store';
 
-// Dynamic Base URL
-const BASE_URL = Platform.select({
-  android: 'http://10.0.2.2:8000/api/v1',
-  ios: 'http://localhost:8000/api/v1',
-  default: 'http://10.0.2.2:8000/api/v1',
-});
+// // Dynamic Base URL
+// const BASE_URL = Platform.select({
+//   android: 'http://10.0.2.2:8000/api/v1',
+//   ios: 'http://localhost:8000/api/v1',
+//   default: 'http://10.0.2.2:8000/api/v1',
+// });
+// Production Backend
+const BASE_URL = 'https://vizo-app-suv9.onrender.com/api/v1';
 
 export const baseApi = createApi({
   reducerPath: 'api',
