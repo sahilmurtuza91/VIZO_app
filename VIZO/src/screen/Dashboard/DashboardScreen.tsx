@@ -90,7 +90,7 @@ const DashboardScreen = ({ navigation }: any) => {
 
         <PerformanceChart requests={requests || []} />
 
-        <ReferralsRingChart data={referralRingData} />
+        <ReferralsRingChart referrals={referralList} />
 
       </ScrollView>
     </SafeAreaView>

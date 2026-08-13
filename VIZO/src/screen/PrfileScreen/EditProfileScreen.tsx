@@ -23,6 +23,7 @@ import { UserProfile, SpecialtyTag } from '../../types/profile';
 // import { profileService } from '../../services/profileService';
 import { useGetProfileQuery, useUpdateProfileMutation } from '../../redux/api/profileApi';
 import { useGetAllLookupDataQuery } from '../../redux/api/lookupApi';
+import { pickImageFromLibrary } from '../../services/imagePickerService';
 
 const EditProfileSchema = Yup.object().shape({
     name: Yup.string()
@@ -43,17 +44,9 @@ const EditProfileSchema = Yup.object().shape({
 });
 
 const EditProfileScreen = ({ navigation }: any) => {
-    // const [profile, setProfile] = useState<UserProfile | null>(null);
-    // const [isLoading, setIsLoading] = useState<boolean>(true);
-    // const [isSaving, setIsSaving] = useState<boolean>(false);
-
-    // rtk query: fetch the real profile and expose an update mutation
     const { data: profile, isLoading } = useGetProfileQuery(undefined);
     const [updateProfile, { isLoading: isSaving }] = useUpdateProfileMutation();
 
-    // specialties/languages options now come from the backend (GET /lookup)
-    // instead of the hardcoded ALL_SPECIALTIES/ALL_LANGUAGES arrays that used
-    // to live here.
     const { data: lookupData } = useGetAllLookupDataQuery(undefined);
     const ALL_SPECIALTIES: string[] = lookupData?.specialties || [];
     const ALL_LANGUAGES: string[] = lookupData?.languages || [];
@@ -64,7 +57,9 @@ const EditProfileScreen = ({ navigation }: any) => {
     const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
     const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
     const [expYears, setExpYears] = useState<number>(8);
-    const [countryCode, setCountryCode] = useState<string>('+1');
+    const [countryCode, setCountryCode] = useState<string>('+91');
+
+    const [pickedAvatarUri, setPickedAvatarUri] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -78,20 +73,10 @@ const EditProfileScreen = ({ navigation }: any) => {
         }
     }, [profile]);
 
-    // const fetchProfileData = async () => {
-    //     setIsLoading(true);
-    //     try {
-    //         const data = await profileService.getUserProfile();
-    //         setProfile(data);
-    //         setSelectedSpecialties(data.specialties || ['Luxury', 'Residential', 'Flats']);
-    //         setSelectedLanguages(data.language || ['English', 'Spanish']);
-    //         setExpYears(data.experience || 8);
-    //     } catch (error) {
-    //         console.log('Error fetching profile:', error);
-    //     } finally {
-    //         setIsLoading(false);
-    //     }
-    // };
+    const handlePickAvatar = async () => {
+        const file = await pickImageFromLibrary();
+        if (file) setPickedAvatarUri(file.uri);
+    };
 
     const toggleSpecialty = (tag: string) => {
         if (selectedSpecialties.includes(tag)) {
@@ -114,34 +99,32 @@ const EditProfileScreen = ({ navigation }: any) => {
             Alert.alert('Validation Error', 'Please select at least one specialty.');
             return;
         }
-
-        // setIsSaving(true);
         try {
-            // backend /profile/edit (updateProfile) expects: name, bio, phone,
-            // experienceYears, specialties, languagesSpoken — mapped from the
-            // UI's phoneNumber/experience/language field names below.
-            const updatedPayload = {
-                name: values.name,
-                bio: values.bio,
-                phone: values.phoneNumber,
-                countryCode: countryCode,
-                email: values.email,
-                experienceYears: expYears,
-                specialties: selectedSpecialties,
-                languagesSpoken: selectedLanguages,
-            };
+            const formData = new FormData();
+            formData.append('name', values.name);
+            formData.append('bio', values.bio);
+            formData.append('phone', values.phoneNumber);
+            formData.append('countryCode', countryCode);
+            formData.append('email', values.email);
+            formData.append('experienceYears', String(expYears));
+            formData.append('specialties', JSON.stringify(selectedSpecialties));
+            formData.append('languagesSpoken', JSON.stringify(selectedLanguages));
 
-            // await profileService.updateProfile(updatedPayload);
-            await updateProfile(updatedPayload).unwrap();
+            if (pickedAvatarUri) {
+                formData.append('avatar', {
+                    uri: pickedAvatarUri,
+                    name: `avatar_${Date.now()}.jpg`,
+                    type: 'image/jpeg',
+                } as any);
+            }
+
+            await updateProfile(formData).unwrap();
             Alert.alert('Success', 'Profile updated successfully!', [
                 { text: 'OK', onPress: () => navigation.goBack() },
             ]);
         } catch (error: any) {
             Alert.alert('Error', error?.data?.message || 'Failed to save changes.');
         }
-        // finally {
-        //     setIsSaving(false);
-        // }
     };
 
     if (isLoading || !profile) {
@@ -205,10 +188,16 @@ const EditProfileScreen = ({ navigation }: any) => {
                         <View style={styles.avatarSection}>
                             <View style={styles.avatarWrapper}>
                                 <Image
-                                    source={require('../../assets/images/Hot.png')}
+                                    source={
+                                        pickedAvatarUri
+                                            ? { uri: pickedAvatarUri }
+                                            : profile?.avatarUrl
+                                                ? { uri: profile.avatarUrl }
+                                                : require('../../assets/images/profile.png')
+                                    }
                                     style={styles.avatarImage}
                                 />
-                                <TouchableOpacity style={styles.plusBadge} activeOpacity={0.8}>
+                                <TouchableOpacity style={styles.plusBadge} activeOpacity={0.8} onPress={handlePickAvatar}>
                                     <Text style={styles.plusIconText}>+</Text>
                                 </TouchableOpacity>
                             </View>
@@ -233,7 +222,6 @@ const EditProfileScreen = ({ navigation }: any) => {
                             touched={!!touched.bio}
                         />
                         <View style={styles.phoneFieldCard}>
-                            {/* was a static "+1" Text with no picker behavior */}
                             <CountryCodePicker value={countryCode} onSelect={setCountryCode} />
 
                             <View style={styles.verticalDivider} />

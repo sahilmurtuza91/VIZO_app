@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
     SafeAreaView,
     View,
@@ -21,8 +21,10 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { CustomInput } from '../../components/CustomInput';
 import { CountryCodePicker } from '../../components/CountryCodePicker';
 import { SelectField } from '../../components/SelectField';
+
 import { useGetAllLookupDataQuery } from '../../redux/api/lookupApi';
 import { useSetupProfileMutation } from '../../redux/api/profileApi';
+import { pickImageFromLibrary } from '../../services/imagePickerService';
 
 const profileSetupSchema = Yup.object().shape({
     agentName: Yup.string()
@@ -44,48 +46,43 @@ const profileSetupSchema = Yup.object().shape({
     email: Yup.string()
         .email('Valid email required')
         .required('Email is required'),
-})
+});
 
 const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [headShotImage, setHeadShotImage] = useState<string | null>(null);
     const [licenseDoc, setLicenseDoc] = useState<string | null>(null);
-    const [countryCode, setCountryCode] = useState<string>('+1');
+    const [countryCode, setCountryCode] = useState<string>('+91');
 
-    // rtk query: dropdown options now come from the backend (GET /lookup)
-    // instead of being typed into a free-text field.
     const { data: lookupData } = useGetAllLookupDataQuery(undefined);
     const [setupProfile, { isLoading: isSubmitting }] = useSetupProfileMutation();
 
-    const handlePickProfileImage = () => {
-        console.log("Pick Profile image trigger")
-        // NOTE: wiring a real image picker (e.g. react-native-image-picker)
-        // is a native-module task outside the scope of this backend-connect
-        // pass - the upload path below (FormData -> /profile/setup) is real
-        // and ready for whatever URI this handler eventually produces.
-    }
-
-    const handlePickHeadshotImage = () => {
-        console.log('Pick Headshot Image trigger');
+    const handlePickProfileImage = async () => {
+        const file = await pickImageFromLibrary();
+        if (file) setProfileImage(file.uri);
     };
 
-    const handleUploadDocument = () => {
-        console.log('Upload License Document trigger');
+    const handlePickHeadshotImage = async () => {
+        const file = await pickImageFromLibrary();
+        if (file) setHeadShotImage(file.uri);
+    };
+
+    const handleUploadDocument = async () => {
+        const file = await pickImageFromLibrary();
+        if (file) setLicenseDoc(file.uri);
     };
 
     const handleProfileSubmit = async (values: {
-        agentName: string
-        reDesignations: string[]
-        licenseType: string
-        licenseNumber: string
-        state: string
-        bio: string
-        phone: string
-        email: string
+        agentName: string;
+        reDesignations: string[];
+        licenseType: string;
+        licenseNumber: string;
+        state: string;
+        bio: string;
+        phone: string;
+        email: string;
     }) => {
         try {
-            // backend PUT /profile/setup expects multipart/form-data (it uses
-            // multer for the profile/headshot/licenseDocument files).
             const formData = new FormData();
             formData.append('agentName', values.agentName);
             formData.append('reDesignations', JSON.stringify(values.reDesignations));
@@ -93,37 +90,54 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
             formData.append('licenseNumber', values.licenseNumber);
             formData.append('state', values.state);
             formData.append('bio', values.bio);
+            formData.append('phone', values.phone);
+            formData.append('email', values.email);
+            formData.append('countryCode', countryCode);
 
             if (profileImage) {
-                formData.append('profile', { uri: profileImage, name: 'profile.jpg', type: 'image/jpeg' } as any);
+                formData.append('profile', {
+                    uri: profileImage,
+                    name: 'profile.jpg',
+                    type: 'image/jpeg',
+                } as any);
             }
             if (headShotImage) {
-                formData.append('headshot', { uri: headShotImage, name: 'headshot.jpg', type: 'image/jpeg' } as any);
+                formData.append('headshot', {
+                    uri: headShotImage,
+                    name: 'headshot.jpg',
+                    type: 'image/jpeg',
+                } as any);
             }
             if (licenseDoc) {
-                formData.append('licenseDocument', { uri: licenseDoc, name: 'license.jpg', type: 'image/jpeg' } as any);
+                formData.append('licenseDocument', {
+                    uri: licenseDoc,
+                    name: 'license.jpg',
+                    type: 'image/jpeg',
+                } as any);
             }
 
             await setupProfile(formData).unwrap();
-
-            // phone/email aren't part of /profile/setup (they're set during
-            // signup) - persisted locally to state only, kept for the UI.
             navigation.navigate("Dashboard");
         } catch (error: any) {
             Alert.alert('Error', error?.data?.message || 'Failed to save profile.');
         }
-    }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.black} />
+
             <LinearGradient
                 colors={['#FF1616', '#FF7A00', 'transparent']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.topGlowLayer}
             />
+
             <TouchableOpacity
                 style={styles.backBtn}
                 onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
             >
                 <Image
                     source={require("../../assets/images/backIcon.png")}
@@ -131,15 +145,17 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                     resizeMode="contain"
                 />
             </TouchableOpacity>
+
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Profile Setup</Text>
                     <Text style={styles.subtitle}>Set up your profile and preferences</Text>
                 </View>
 
+                {/* Photo Upload Section */}
                 <View style={styles.photoRow}>
                     <View style={styles.photoContainer}>
-                        <TouchableOpacity style={styles.avatarCircle} onPress={handlePickProfileImage}>
+                        <TouchableOpacity style={styles.avatarCircle} onPress={handlePickProfileImage} activeOpacity={0.8}>
                             {profileImage ? (
                                 <Image source={{ uri: profileImage }} style={styles.avatarImage} />
                             ) : (
@@ -156,7 +172,7 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                     </View>
 
                     <View style={styles.photoContainer}>
-                        <TouchableOpacity style={styles.avatarCircle} onPress={handlePickHeadshotImage}>
+                        <TouchableOpacity style={styles.avatarCircle} onPress={handlePickHeadshotImage} activeOpacity={0.8}>
                             {headShotImage ? (
                                 <Image source={{ uri: headShotImage }} style={styles.avatarImage} />
                             ) : (
@@ -183,6 +199,7 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                         Your photo will appear blurred to clients until identity verification is complete.
                     </Text>
                 </View>
+
                 <Formik
                     initialValues={{
                         agentName: '',
@@ -216,8 +233,6 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                                 touched={touched.agentName}
                             />
 
-                            {/* was a free-text input - now a real multi-select
-                                pulling designations from the backend's /lookup endpoint */}
                             <SelectField
                                 placeholder="RE Designations (select all that apply)"
                                 options={lookupData?.designations || []}
@@ -266,7 +281,7 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                                 touched={touched.bio}
                             />
 
-                            <TouchableOpacity style={styles.uploadBox} onPress={handleUploadDocument}>
+                            <TouchableOpacity style={styles.uploadBox} onPress={handleUploadDocument} activeOpacity={0.8}>
                                 <View style={styles.cloudIconContainer}>
                                     <Image
                                         source={require('../../assets/images/cloud_upload.png')}
@@ -274,14 +289,15 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                                         resizeMode="contain"
                                     />
                                 </View>
-                                <Text style={styles.uploadTitle}>Upload License Document</Text>
+                                <Text style={styles.uploadTitle}>
+                                    {licenseDoc ? 'Document Selected ✓' : 'Upload License Document'}
+                                </Text>
                                 <Text style={styles.uploadSubtitle}>
                                     Please take a clear photo with a maximum file size of 2 MB.
                                 </Text>
                             </TouchableOpacity>
-
+ 
                             <View style={styles.phoneInputRow}>
-                                {/* was a static "+1" Text - now backed by the backend country list */}
                                 <CountryCodePicker value={countryCode} onSelect={setCountryCode} />
                                 <View style={styles.flexInput}>
                                     <CustomInput
@@ -308,7 +324,7 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                             />
 
                             <PrimaryButton
-                                title="Submit"
+                                title={isSubmitting ? "Submitting..." : "Submit"}
                                 onPress={() => handleSubmit()}
                                 style={styles.primaryBtnSpacing}
                                 disabled={isSubmitting}
@@ -318,10 +334,10 @@ const ProfileSetupScreen = ({ navigation }: ProfileSetupScreenProps) => {
                 </Formik>
             </ScrollView>
         </SafeAreaView>
-    )
-}
+    );
+};
 
-export default ProfileSetupScreen
+export default ProfileSetupScreen;
 
 const styles = StyleSheet.create({
     container: {
@@ -428,7 +444,6 @@ const styles = StyleSheet.create({
     infoBannerText: {
         flex: 1,
         color: COLORS.white,
-        // fontWeight:400,
         fontSize: 11,
         lineHeight: 16,
     },
@@ -472,29 +487,10 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         marginTop: 10,
     },
-    countryCodeBox: {
-        height: 52,
-        backgroundColor: COLORS.inputBg,
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 10,
-        borderWidth: 1,
-        borderColor: COLORS.borderDark,
-    },
-    countryCodeText: {
-        color: COLORS.white,
-        marginRight: 6,
-    },
-    downArrow: {
-        width: 12,
-        height: 12,
-    },
     flexInput: {
         flex: 1,
     },
     primaryBtnSpacing: {
         marginVertical: 15,
     },
-})
+});

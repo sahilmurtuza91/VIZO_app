@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   SafeAreaView,
   View,
@@ -14,31 +14,12 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 
 import { COLORS } from '../../constants/Color';
-import { UserProfile } from '../../types/profile';
-// import { profileService } from '../../services/profileService';
 import { useGetProfileQuery } from '../../redux/api/profileApi';
 
+const DEFAULT_AVATAR = require('../../assets/images/profile.png');
+
 const ProfileDetailsScreen = ({ navigation }: any) => {
-  // const [profile, setProfile] = useState<UserProfile | null>(null);
-  // const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const {data:profile, isLoading} = useGetProfileQuery(undefined);
-
-  // useEffect(() => {
-  //   fetchProfileDetails();
-  // }, []);
-
-  // const fetchProfileDetails = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     const data = await profileService.getUserProfile();
-  //     setProfile(data);
-  //   } catch (error) {
-  //     console.log('Error fetching profile details:', error);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  const { data: profile, isLoading } = useGetProfileQuery(undefined);
 
   if (isLoading || !profile) {
     return (
@@ -47,6 +28,23 @@ const ProfileDetailsScreen = ({ navigation }: any) => {
       </View>
     );
   }
+
+  const avatarSource = profile.avatarUrl
+    ? { uri: profile.avatarUrl }
+    : DEFAULT_AVATAR;
+
+  const specialtiesList =
+    profile.specialties?.length > 0
+      ? profile.specialties.join(', ')
+      : 'Not Specified';
+
+  const languagesList =
+    (profile.languagesSpoken || profile.language)?.length > 0
+      ? (profile.languagesSpoken || profile.language).join(', ')
+      : 'Not Specified';
+
+  const experienceYears = profile.experienceYears ?? profile.experience ?? 0;
+  const phoneNumber = profile.phone || profile.phoneNumber || 'N/A';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -80,8 +78,9 @@ const ProfileDetailsScreen = ({ navigation }: any) => {
       >
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
+            {/* 🛠️ FIXED: Dynamic Avatar Source Instead of Hardcoded Hot.png */}
             <Image
-              source={require('../../assets/images/Hot.png')}
+              source={avatarSource}
               style={styles.avatarImage}
             />
             <View style={styles.plusBadge}>
@@ -94,56 +93,56 @@ const ProfileDetailsScreen = ({ navigation }: any) => {
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Agent Name</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.name}
+              {profile.name || 'Agent Name'}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Bio / Summary</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.bio}
+              {profile.bio || 'No bio provided'}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Phone number</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.countryCode} {profile.phoneNumber}
+              {profile.countryCode || '+91'} {phoneNumber}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Email</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.email}
+              {profile.email || 'N/A'}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Years of Experience</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.experience}+ Years
+              {experienceYears}+ Years
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Specialties</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.specialties?.join(', ')}
+              {specialtiesList}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Languages Spoken</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.language?.join(', ')}
+              {languagesList}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>License Document</Text>
             <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
-              {profile.licenseNumber}
+              {profile.licenseNumber || 'N/A'}
             </Text>
           </View>
         </View>
@@ -253,7 +252,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     color: '#8E8E93',
     fontSize: 13,
-    flex: 1, 
+    flex: 1,
   },
   detailValue: {
     color: '#FFFFFF',

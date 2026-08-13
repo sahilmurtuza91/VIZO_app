@@ -1,3 +1,4 @@
+const GOOGLE_WEB_CLIENT_ID ='620300201727-dqodgmlmqtbl6fog5k7dkrq2986afgpp.apps.googleusercontent.com';
 let GoogleSignin: any = null;
 try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires

@@ -17,6 +17,7 @@ export const referralApi = baseApi.injectEndpoints({
                     customerRequirement: item.notes || item.propertyType || '',
                     referralStatus: item.status,
                     acceptedAgentName: item.acceptedByAgent?.name || '—',
+                    createdAt: item.createdAt,
                 }));
 
                 const dashboardSummary = {

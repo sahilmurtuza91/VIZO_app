@@ -11,15 +11,11 @@ import {
 
 import { COLORS } from '../constants/Color';
 
-// Generic tap-to-open dropdown used wherever a screen needs to pick from a
-// backend-provided options list (designations, license type, state,
-// property type, issue type, etc. - all served by GET /lookup) instead of
-// a hardcoded local array or a free-text input.
 
 interface SelectFieldProps {
     placeholder: string;
     options: string[];
-    value: string | string[]; // string for single-select, string[] for multi-select
+    value: string | string[]; 
     onChange: (value: string | string[]) => void;
     multiSelect?: boolean;
     error?: string;

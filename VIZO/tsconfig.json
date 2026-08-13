@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["jest"]
   },
-  "include": ["**/*.ts", "**/*.tsx", "src/screen/RequestScreen/ClientDetailScreen", "src/screen/ChatScreen/ChatDetailScreen.tx"],
+  "include": ["**/*.ts", "**/*.tsx", "src/screen/RequestScreen/ClientDetailScreen", "src/screen/ChatScreen/ChatDetailScreen.tsx"],
   "exclude": ["**/node_modules", "**/Pods"]
 }

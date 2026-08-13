@@ -18,6 +18,8 @@ import MyTicketsScreen from '../screen/PrfileScreen/TicketScreen/MyTicketsScreen
 
 import BottomTabNavigator from './BottomTabNavigator';
 
+import ChatDetailScreen from '../screen/ChatScreen/ChatDetailScreen';
+
 import DailyActivitiesScreen from '../screen/DailyActivitiesScreen/DailyActivitiesScreen';
 import SubscriptionPlansScreen from '../screen/SubscriptionScreen/SubscriptionPlansScreen';
 import HelpCenterScreen from '../screen/PrfileScreen/HelpCenterScreen/HelpCenterScreen';
@@ -60,6 +62,9 @@ const AppNavigator = () => {
                 <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
 
                 <Stack.Screen name="Dashboard" component={BottomTabNavigator} />
+
+                {/* Registered ChatDetailScreen in Navigation Stack */}
+                <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} />
 
                 <Stack.Screen name='ClientDetail' component={ClientDetailScreen} />
                 <Stack.Screen name="PropertyRequirements" component={PropertyRequirementsScreen} />
