@@ -2,6 +2,7 @@ const User = require("../models/user.model");
 const ApiError = require("../utils/ApiError");
 const asyncHandler = require("../utils/AsyncHandler");
 const { sendSuccess } = require("../utils/apiResponse");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 
 const {
     RE_DESIGNATION_OPTIONS,
@@ -18,6 +19,22 @@ const getProfile = asyncHandler(async (req, res, next) => {
 
     return sendSuccess(res, 200, "Profile fetched successfully.", user.toPublicProfile());
 })
+
+const getPublicProfileById = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+        return next(new ApiError("Agent not found", 404));
+    }
+
+    if (req.user._id.toString() !== id) {
+        user.profileViewCount = (user.profileViewCount || 0) + 1;
+        await user.save();
+    }
+
+    return sendSuccess(res, 200, "Profile fetched successfully.", user.toPublicProfile());
+});
 
 
 // setup profile after signup or register
@@ -105,7 +122,6 @@ const updateProfile = asyncHandler(async (req, res, next) => {
     return sendSuccess(res, 200, "Profile updated successfully.", user.toPublicProfile());
 });
 
-// update the availabe or offline
 const toggleAvailability = asyncHandler(async (req, res, next) => {
     const { isAvailable } = req.body;
 
@@ -190,6 +206,7 @@ const updateNotificationSettings = asyncHandler(async (req, res, next) => {
 
 module.exports = {
     getProfile,
+    getPublicProfileById,
     setupProfile,
     updateProfile,
     toggleAvailability,

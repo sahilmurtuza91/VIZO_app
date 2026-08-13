@@ -4,6 +4,7 @@ const router = express.Router();
 
 const {
     getProfile,
+    getPublicProfileById,
     setupProfile,
     updateLocation,
     updateProfile,
@@ -19,6 +20,8 @@ router.use(protect);
 
 router.get("/me", getProfile);
 
+router.get("/:id", getPublicProfileById);
+
 router.put(
     "/setup",
     upload.fields([
@@ -29,7 +32,7 @@ router.put(
     setupProfile
 );
 
-router.put("/edit", upload.single("profile"), updateProfile);
+router.put("/edit", upload.fields([{ name: "avatar", maxCount: 1 }]), updateProfile);
 
 router.patch("/availability", toggleAvailability);
 
