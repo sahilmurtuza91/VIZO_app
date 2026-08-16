@@ -207,7 +207,7 @@
 //     const existingNotifications = await Notification.countDocuments({ recipient: agent._id });
 //     if (existingNotifications === 0) {
 //         const notifications = [
-//             { message: "Sara Khan sent you a new showing request.", senderName: "Sara Khan", targetScreen: "ClientDetail" },
+//             { message: "Sara Khan sent you a new showing request.", senderName: "Sara Khan", targetScreen: "ClientDetailScreen" },
 //             { message: "Your Ruby subscription renews in 5 days.", senderName: "VIZO", targetScreen: "SubscriptionPlansScreen" },
 //             { message: "New message from Rahul Mehta.", senderName: "Rahul Mehta", targetScreen: "ChatDetailScreen" },
 //         ].map((n) => ({ ...n, recipient: agent._id }));
@@ -804,7 +804,7 @@ const runSeeder = async () => {
                 senderImage: "https://i.pravatar.cc/150?img=11",
                 message: "John Smith approved your viewing request for Bandra Apartment.",
                 isRead: false,
-                targetScreen: "ClientDetail",
+                targetScreen: "ClientDetailScreen",
                 createdAt: minutesAgo(10),
             },
             {
@@ -813,7 +813,7 @@ const runSeeder = async () => {
                 senderImage: "https://i.pravatar.cc/150?img=47",
                 message: "Sara Khan sent you a new showing request for Juhu Beach Villa.",
                 isRead: false,
-                targetScreen: "ClientDetail",
+                targetScreen: "ClientDetailScreen",
                 createdAt: minutesAgo(45),
             },
             {

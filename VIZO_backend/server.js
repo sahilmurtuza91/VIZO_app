@@ -5,6 +5,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const helmet = require("helmet");
+const compress = require("compression");
 
 const connectDB = require("./src/config/db.config");
 const errorHandler = require("./src/middlewares/errorHandler");
@@ -49,6 +50,7 @@ const corsOptions = {
 
 app.use(helmet());
 app.use(cors(corsOptions));
+app.use(compress());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

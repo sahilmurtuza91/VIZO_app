@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
 import { COLORS } from '../constants/Color';
 
 interface PrimaryButtonProps {
@@ -8,22 +8,30 @@ interface PrimaryButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   disabled?: boolean;
+  loading?: boolean;
 }
 
-export const PrimaryButton: React.FC<PrimaryButtonProps> = ({ 
-  title, 
-  onPress, 
-  style, 
+export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
+  title,
+  onPress,
+  style,
   textStyle,
   disabled,
+  loading,
 }) => {
+  const isDisabled = disabled || loading;
+
   return (
-    <TouchableOpacity 
-      onPress={disabled ? undefined : onPress} 
-      activeOpacity={0.8} 
+    <TouchableOpacity
+      onPress={disabled ? undefined : onPress}
+      activeOpacity={0.8}
       style={[styles.button, style, disabled && styles.buttonDisabled]}
     >
-      <Text style={[styles.text, textStyle]}>{title}</Text>
+      {loading ? (
+        <ActivityIndicator size="small" color={COLORS.white} />
+      ) : (
+        <Text style={[styles.text, textStyle]}>{title}</Text>
+      )}
     </TouchableOpacity>
   );
 };

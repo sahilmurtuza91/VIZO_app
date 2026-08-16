@@ -48,6 +48,9 @@ export type RootStackParamList = {
   InviteAndEarnScreen: undefined;
   WorkingHoursScreen: undefined;
   SelectCalendarScreen: undefined;
+
+  AudioCallScreen: { clientData: any; isIncoming?: boolean };
+  VideoCallScreen: { clientData: any; isIncoming?: boolean };
 };
 
 export type SplashScreenProps = NativeStackScreenProps<

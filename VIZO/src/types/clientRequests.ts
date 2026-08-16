@@ -19,4 +19,5 @@ export interface ClientRequestItem {
     configuration?: string;
     preferredArea?: string;
     isReviewRequested?: boolean
+    clientUserId?: string;
 }

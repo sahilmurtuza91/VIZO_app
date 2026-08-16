@@ -1,91 +1,138 @@
-const buildOtpEmailHtml = (otpCode, purposeLabel = "verify your account", userName = "") => {
-    const formattedOtp = otpCode.toString().split("").join(" ");
-    const recipientName = userName ? `Hi ${userName},` : "Hi there,";
+const buildOtpEmailHtml = (otpCode, purposeLabel = "reset your password", userName = "") => {
+    const digits = otpCode.toString().split("");
+    const recipientName = userName ? `Hello <strong>${userName}</strong>,` : "Hello,";
 
-    // Dynamic Title based on purpose
-    let headingTitle = "Verification Code";
+    let headingTitle = "Verify Your Identity";
+    let subTitle = "Secure Verification Code";
+
     if (purposeLabel.includes("reset")) {
-        headingTitle = "Password Reset Request";
+        headingTitle = "Reset Your Password";
+        subTitle = "Password Recovery Request";
     } else if (purposeLabel.includes("login")) {
-        headingTitle = "Security Verification";
+        headingTitle = "Account Security Verification";
+        subTitle = "Two-Factor Authentication";
+    } else if (purposeLabel.includes("register") || purposeLabel.includes("signup") || purposeLabel.includes("email")) {
+        headingTitle = "Verify Your Email Address";
+        subTitle = "Account Activation";
     }
+
+    // Individual glowing digit boxes (Single Row Safe)
+    const digitBoxesHtml = digits.map((digit) => `
+        <td align="center" style="padding: 0 4px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="46" style="width: 46px;">
+                <tr>
+                    <td align="center" height="54" style="background: #18181B; border: 1px solid #3F3F46; border-radius: 10px; height: 54px; text-align: center; color: #FF7A00; font-size: 26px; font-weight: 800; font-family: 'SF Pro Display', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, monospace;">
+                        ${digit}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    `).join("");
 
     return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${headingTitle}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>${headingTitle}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #0A0A0A; padding: 40px 16px;">
-    <tr>
-      <td align="center">
-        <!-- Main Card Container -->
-        <table role="presentation" width="100%" maxWidth="440" cellpadding="0" cellspacing="0" style="max-width: 440px; background-color: #141416; border-radius: 20px; border: 1px solid #2C2C2E; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-          
-          <!-- Header Bar with VIZO Brand Gradient -->
-          <tr>
-            <td style="background: linear-gradient(90deg, #FF1616 0%, #FF7A00 100%); padding: 22px 28px; text-align: left;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <span style="color: #FFFFFF; font-size: 24px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;">VIZO</span>
-                  </td>
-                  <td style="text-align: right;">
-                    <span style="color: rgba(255,255,255,0.85); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Real Estate Agent</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
 
-          <!-- Body Content -->
-          <tr>
-            <td style="padding: 32px 28px 12px 28px;">
-              <h1 style="color: #FFFFFF; font-size: 20px; font-weight: 700; margin: 0 0 12px 0;">${headingTitle}</h1>
-              <p style="color: #E5E5EA; font-size: 15px; font-weight: 500; margin: 0 0 10px 0;">${recipientName}</p>
-              <p style="color: #A0A0A5; font-size: 14px; line-height: 22px; margin: 0;">
-                Use the verification code below to ${purposeLabel}. This code is valid for 
-                <strong style="color: #FF7A00; font-weight: 700;">5 minutes</strong> and should not be shared with anyone.
-              </p>
-            </td>
-          </tr>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #0A0A0A; padding: 40px 15px;">
+        <tr>
+            <td align="center">
 
-          <!-- OTP Code Highlight Box -->
-          <tr>
-            <td align="center" style="padding: 24px 28px;">
-              <div style="background-color: #1C1C1E; border: 1.5px solid #2C2C2E; border-radius: 14px; padding: 18px 24px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);">
-                <span style="color: #FF7A00; font-size: 34px; font-weight: 800; letter-spacing: 12px; font-family: 'Courier New', Courier, monospace; display: inline-block; margin-left: 12px;">${formattedOtp}</span>
-              </div>
-            </td>
-          </tr>
+                <!-- Main Card Container (Max Width 580px) -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; background-color: #121214; border-radius: 18px; border: 1px solid #27272A; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);">
 
-          <!-- Security Note -->
-          <tr>
-            <td style="padding: 0 28px 28px 28px;">
-              <p style="color: #7C7C80; font-size: 12px; line-height: 18px; margin: 0; text-align: center;">
-                If you didn't request this code, someone may be trying to access your VIZO account. You can safely ignore this email.
-              </p>
-            </td>
-          </tr>
+                    <!-- Header Banner with Gradient Accent -->
+                    <tr>
+                        <td align="center" style="background: linear-gradient(135deg, #FF1616 0%, #FF7A00 100%); padding: 32px 24px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center">
+                                        <h1 style="margin: 0; color: #FFFFFF; font-size: 32px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">
+                                            VIZO
+                                        </h1>
+                                        <p style="margin: 6px 0 0 0; color: rgba(255, 255, 255, 0.88); font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">
+                                            ${subTitle}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-          <!-- Footer Divider & Copyright -->
-          <tr>
-            <td style="padding: 18px 28px; background-color: #0F0F11; border-top: 1px solid #242426; text-align: center;">
-              <p style="color: #55555A; font-size: 11px; font-weight: 500; margin: 0;">
-                © 2026 VIZO App Inc. All rights reserved.
-              </p>
-            </td>
-          </tr>
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 38px 36px 20px 36px;">
 
-        </table>
-      </td>
-    </tr>
-  </table>
+                            <h2 style="margin: 0 0 16px 0; color: #FFFFFF; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">
+                                ${headingTitle}
+                            </h2>
+
+                            <p style="margin: 0 0 12px 0; font-size: 15px; color: #D4D4D8; line-height: 1.7;">
+                                ${recipientName}
+                            </p>
+
+                            <p style="margin: 0 0 28px 0; font-size: 15px; color: #A1A1AA; line-height: 1.7;">
+                                To ${purposeLabel}, please use the one-time verification code provided below.
+                            </p>
+
+                            <!-- OTP Box Card -->
+                            <div style="text-align: center; margin: 30px 0 24px 0;">
+                                <p style="margin: 0 0 12px 0; color: #71717A; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;">
+                                    One-Time Password (OTP)
+                                </p>
+
+                                <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
+                                    <tr>
+                                        ${digitBoxesHtml}
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Expiry Alert -->
+                            <div style="text-align: center; margin-bottom: 28px;">
+                                <p style="margin: 0; font-size: 13px; color: #A1A1AA;">
+                                    ⏱️ This code will expire in <strong style="color: #FF7A00;">5 minutes</strong>.
+                                </p>
+                            </div>
+
+                            <!-- Security Notice Box -->
+                            <div style="background-color: #18181B; border-left: 4px solid #FF7A00; border-radius: 8px; padding: 16px 18px; margin-top: 10px;">
+                                <p style="margin: 0; color: #E4E4E7; font-size: 13px; line-height: 1.6;">
+                                    <strong style="color: #FFFFFF;">Security Notice:</strong>
+                                    VIZO representatives will never ask for your verification code via phone call, SMS, or direct chat. Never share this code with anyone.
+                                </p>
+                            </div>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer Section -->
+                    <tr>
+                        <td style="background-color: #0E0E10; padding: 24px 36px; border-top: 1px solid #1F1F23;">
+                            <p style="margin: 0 0 10px 0; color: #71717A; font-size: 12px; line-height: 1.6;">
+                                If you did not request this verification code, someone may be attempting to access your account. You can safely disregard this email.
+                            </p>
+                            <p style="margin: 0; color: #52525B; font-size: 11px;">
+                                © 2026 VIZO App Inc. All rights reserved. • Secure Transactional Service
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
 </body>
-</html>`;
+</html>
+    `;
 };
 
 module.exports = buildOtpEmailHtml;

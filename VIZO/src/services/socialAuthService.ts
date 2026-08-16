@@ -1,8 +1,11 @@
-const GOOGLE_WEB_CLIENT_ID ='620300201727-dqodgmlmqtbl6fog5k7dkrq2986afgpp.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = '620300201727-dqodgmlmqtbl6fog5k7dkrq2986afgpp.apps.googleusercontent.com';
 let GoogleSignin: any = null;
 try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     GoogleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+    GoogleSignin?.configure({
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        offlineAccess: false,
+    });
 } catch (e) {
 
 }
@@ -19,10 +22,11 @@ try {
 }
 
 export const socialAuthService = {
+    // google login
     signInWithGoogle: async (): Promise<{ idToken: string }> => {
         if (!GoogleSignin) {
             throw new Error(
-                'Google Sign-In not installed. Run `npm install @react-native-google-signin/google-signin`, configure it (see CHANGELOG.md), then rebuild the app.'
+                'Google Sign-In is not available. Please check the Google Sign-In setup.'
             );
         }
         await GoogleSignin.hasPlayServices();
@@ -34,10 +38,11 @@ export const socialAuthService = {
         return { idToken };
     },
 
+    // facebook login
     signInWithFacebook: async (): Promise<{ accessToken: string }> => {
         if (!LoginManager || !AccessToken) {
             throw new Error(
-                'Facebook Login not installed. Run `npm install react-native-fbsdk-next`, configure it (see CHANGELOG.md), then rebuild the app.'
+                'Facebook Login is not available. Please check the Facebook Login setup.'
             );
         }
         const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);

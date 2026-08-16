@@ -29,6 +29,16 @@ const conversationSchema = new mongoose.Schema({
         of: Number,
         default: {}
     },
+    mutedBy:[{ // for the traking of the notification mute
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User",
+        default:[],
+    }],
+    deletedFor:[{ // for the soft delete from the user whose choose clear chat
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User",
+        default:[],
+    }],
 }, { timestamps: true });
 
 conversationSchema.index({ participants: 1 });

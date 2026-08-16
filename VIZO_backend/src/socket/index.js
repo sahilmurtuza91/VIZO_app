@@ -2,8 +2,10 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const handleChatSocket = require("./chatSocket");
 const handleLocationSocket = require("./locationSocket");
+const { setIO } = require("../utils/socketManager");
 
 const initializeSocket = (io) => {
+    setIO(io);
     io.use(async (socket, next) => {
         try {
             // extract token from header
@@ -40,7 +42,7 @@ const initializeSocket = (io) => {
         handleLocationSocket(io, socket);
 
         socket.on("disconnect", () => {
-            console.log(`🔌 Disconnected User: ${socket.user.name}`);
+            console.log(`Disconnected User: ${socket.user.name}`);
         });
     });
 };

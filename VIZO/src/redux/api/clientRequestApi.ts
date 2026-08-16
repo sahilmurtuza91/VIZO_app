@@ -1,6 +1,6 @@
 import { baseApi } from "./baseApi";
 
-// helper to formate the data according to the frontend
+// helper function
 const mapRequest = (item: any) => ({
     id: item._id,
     name: item.name,
@@ -14,6 +14,7 @@ const mapRequest = (item: any) => ({
         : '',
     clientNotes: item.clientNotes,
     status: item.status,
+    clientUserId: item.clientUser?._id || item.clientUser || undefined,
     budgetRange:
         item.budgetMin != null && item.budgetMax != null
             ? `$${item.budgetMin.toLocaleString()} - $${item.budgetMax.toLocaleString()}`

@@ -24,37 +24,10 @@ import {
 } from "../../../redux/api/notificationApi";
 
 const NotificationsScreen = ({ navigation }: any) => {
-    // const [notification, setNotification] = useState<NotificationItems[]>([]);
-    // const [isLoading, setIsLoading] = useState<boolean>(true);
-
-    const { data: notification = [], isLoading } = useGetNotificationQuery(undefined);
+    const { data: notification = [], isLoading } = useGetNotificationQuery({ isRead: false });
     const [markAllRead] = useMarkAllReadMutation();
     const [markSingleRead] = useMarkSingleReadMutation();
-
-    // useEffect(() => {
-    //     fetchNotifications();
-    // }, []);
-
-    // const fetchNotifications = async () => {
-    //     setIsLoading(true);
-    //     try {
-    //         const data = await notificationService.getAllNotification();
-    //         setNotification(data);
-    //     } catch (error) {
-    //         console.log("Faild to laod Notification: ", error);
-    //     } finally {
-    //         setIsLoading(false);
-    //     }
-    // }
-
     const handleMarlAllRead = async () => {
-        // try {
-        //     const updatedNotification = await notificationService.markReadAllNotification();
-        //     setNotification(updatedNotification);
-        // } catch (error) {
-        //     console.log("Faild to update the mark all notification");
-        // }
-
         try {
             await markAllRead(undefined).unwrap();
         } catch (error) {
@@ -63,23 +36,10 @@ const NotificationsScreen = ({ navigation }: any) => {
     }
 
     const singleItemRead = async (item: NotificationItems) => {
-        // try {
-        //     await notificationService.markSingleRead(item.id);
-        //     setNotification((prev) =>
-        //         prev.map((notification) =>
-        //             notification.id === item.id ? { ...notification, isRead: true } : notification
-        //         )
-        //     );
-        //     if (item.targetScreen) {
-        //         navigation.navigate(item.targetScreen);
-        //     }
-        // } catch (error) {
-        //     console.log("faild to handle the single item: ", error);
-        // }
         try {
             await markSingleRead(item.id).unwrap();
             if (item.targetScreen) {
-                navigation.navigate(item.targetScreen);
+                navigation.navigate(item.targetScreen, { id: item.targetId });
             }
         } catch (error) {
             console.log("faild to handle the single item: ", error);

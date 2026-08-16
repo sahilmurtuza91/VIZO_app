@@ -6,6 +6,9 @@ const {
     getMyConversations,
     getMessages,
     sendMessage,
+    markAllAsRead,
+    clearConversationMessages,
+    toggleMuteConversation,
     getChatStats,
 } = require("../controllers/chat.controller");
 
@@ -21,5 +24,9 @@ router.route("/conversations")
 router.get("/stats", getChatStats);
 router.get("/messages/:conversationId", getMessages);
 router.post("/message", upload.single("media"), sendMessage);
+
+router.patch("/mark-all-read", markAllAsRead);
+router.delete("/clear/:conversationId", clearConversationMessages);
+router.patch("/mute/:conversationId", toggleMuteConversation);
 
 module.exports = router;

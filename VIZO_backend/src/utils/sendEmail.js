@@ -22,7 +22,7 @@
 
 // module.exports = sendEmail;
 
-const nodemailer = require("nodemailer");
+// const nodemailer = require("nodemailer");
 
 // const sendEmail = async (options) => {
 //     const transporter = nodemailer.createTransport({
@@ -52,36 +52,36 @@ const nodemailer = require("nodemailer");
 
 // module.exports = sendEmail;
 
+const nodemailer = require("nodemailer");
+
 const sendEmail = async (options) => {
     try {
-        const response = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT || 587),
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
             },
-            body: JSON.stringify({
-                from: process.env.EMAIL_FROM,
-                to: [options.email],
-                subject: options.subject,
-                text: options.message,
-                html: options.html,
-            }),
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 10000,
         });
 
-        const data = await response.json();
+        const mailOptions = {
+            from: `VIZO <${process.env.EMAIL_FROM}>`,
+            to: options.email,
+            subject: options.subject,
+            text: options.message,
+            html: options.html,
+        };
 
-        if (!response.ok) {
-            console.error("Resend API Error:", data);
+        const info = await transporter.sendMail(mailOptions);
 
-            throw new Error(
-                data?.message || "Failed to send email"
-            );
-        }
+        console.log("Email sent successfully:", info.messageId);
 
-        console.log("Email sent successfully:", data.id);
-
-        return data;
+        return info;
     } catch (error) {
         console.error("Email sending failed:", error);
         throw error;

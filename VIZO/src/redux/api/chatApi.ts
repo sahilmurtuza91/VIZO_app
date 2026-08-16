@@ -36,6 +36,32 @@ export const chatApi = baseApi.injectEndpoints({
             providesTags: ["ChatStats"],
             transformResponse: (response: any) => response.data,
         }),
+        markAllAsRead: builder.mutation<any, void>({
+            query: () => ({
+                url: '/mark-all-read',
+                method: 'PATCH',
+            }),
+            invalidatesTags: ['Conversation'],
+        }),
+
+        clearChat: builder.mutation({
+            query: (conversationId: string) => ({
+                url: `/clear/${conversationId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, conversationId) => [
+                { type: 'Message', id: conversationId },
+                'Conversation',
+            ],
+        }),
+
+        toggleMuteChat: builder.mutation({
+            query: (conversationId: string) => ({
+                url: `/mute/${conversationId}`,
+                method: 'PATCH',
+            }),
+            invalidatesTags: ['Conversation'],
+        }),
     }),
 });
 
@@ -45,4 +71,7 @@ export const {
     useGetMessagesQuery,
     useSendMessageMutation,
     useGetChatStatsQuery,
+    useMarkAllAsReadMutation,
+    useClearChatMutation,
+    useToggleMuteChatMutation,
 } = chatApi;

@@ -28,6 +28,10 @@ socke.join --> room join perform
 */
 
 const handleChatSocket = (io, socket) => {
+    if (socket.user?._id) {
+        socket.join(`user_${socket.user._id}`);
+    }
+
     // Join Conversation Room
     socket.on("join_conversation", (conversationId) => {
         if (!conversationId) return;
@@ -64,6 +68,15 @@ const handleChatSocket = (io, socket) => {
                 conversation.lastMessage = text || "Image";
                 conversation.lastMessageAt = Date.now();
                 conversation.lastMessageSender = socket.user._id;
+                conversation.deletedFor = [];
+
+                conversation.participants.forEach((participantId) => {
+                    if (participantId.toString() !== socket.user._id.toString()) {
+                        const current = conversation.unreadCounts.get(participantId.toString()) || 0;
+                        conversation.unreadCounts.set(participantId.toString(), current + 1);
+                    }
+                });
+
                 await conversation.save();
             }
 
@@ -73,7 +86,8 @@ const handleChatSocket = (io, socket) => {
             // Send notification trigger to other participants
             if (conversation) {
                 conversation.participants.forEach((participantId) => {
-                    if (participantId.toString() !== socket.user._id.toString()) {
+                    const isMuted = conversation.mutedBy?.some((id) => id.toString() === participantId.toString());
+                    if (participantId.toString() !== socket.user._id.toString() && !isMuted) {
                         io.to(`user_${participantId}`).emit("new_message_notification", {
                             conversationId,
                             senderName: socket.user.name,

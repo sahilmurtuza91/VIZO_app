@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
     StatusBar,
     Platform,
+    Alert,
 } from "react-native";
 
 import LinearGradient from "react-native-linear-gradient";
@@ -17,6 +18,7 @@ import { COLORS } from "../../constants/Color";
 import { ClientRequestItem } from "../../types/clientRequests";
 // import { clientRequestService } from "../../services/clientRequestService";
 import { useRequestReviewMutation, useUpdateRequestStatusMutation } from "../../redux/api/clientRequestApi";
+import { useAccessConversationMutation } from "../../redux/api/chatApi";
 
 const PropertyRequirementsScreen = ({ navigation, route }: any) => {
     const clientData: ClientRequestItem = route.params?.clientData;
@@ -25,30 +27,52 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
         clientData?.isReviewRequested || false
     );
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-     const [requestReview] = useRequestReviewMutation();
-     // "Mark Completed" was just a console.log - PATCH /client-requests/:id/status
-     // already supports a "completed" status, so wired that in.
-     const [updateRequestStatus] = useUpdateRequestStatusMutation();
+    const [requestReview] = useRequestReviewMutation();
+    const [updateRequestStatus] = useUpdateRequestStatusMutation();
+    const [accessConversation, { isLoading: isStartingChat }] = useAccessConversationMutation();
 
-     const handleMarkCompleted = async () => {
-         if (!clientData?.id) return;
-         try {
-             await updateRequestStatus({ id: clientData.id, status: 'completed' }).unwrap();
-             navigation.goBack();
-         } catch (error: any) {
-             console.log("Failed to mark request completed:", error);
-         }
-     };
+    const handleStartChat = async () => {
+        if (!clientData?.clientUserId) {
+            Alert.alert(
+                'Chat unavailable',
+                'This client request has no linked client account to message yet.'
+            );
+            return;
+        }
+        try {
+            const conversation = await accessConversation({
+                receiverId: clientData.clientUserId,
+                clientRequestId: clientData.id,
+            }).unwrap();
+
+            navigation.navigate('ChatDetailScreen', {
+                clientData: {
+                    id: conversation.data._id,
+                    name: clientData.name,
+                    avatarUrl: clientData.avatarUrl,
+                    rawConversationData: conversation.data,
+                },
+            });
+        } catch (error: any) {
+            Alert.alert('Error', error?.data?.message || 'Could not start chat.');
+        }
+    };
+
+    const handleMarkCompleted = async () => {
+        if (!clientData?.id) return;
+        try {
+            await updateRequestStatus({ id: clientData.id, status: 'completed' }).unwrap();
+            navigation.goBack();
+        } catch (error: any) {
+            console.log("Failed to mark request completed:", error);
+        }
+    };
 
     const handleSendReview = async () => {
         if (!clientData?.id) return;
 
         setIsSubmitting(true);
         try {
-            // const success = await clientRequestService.sendReviewRequest(clientData.id);
-            // if (success) {
-            //     setIsReviewSent(true);
-            // }
             await requestReview(clientData.id).unwrap();
             setIsReviewSent(true);
         } catch (error) {
@@ -70,7 +94,7 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
         }
         return (
             <Image
-                source={require("../../assets/images/Hot.png")}
+                source={{ uri: clientData.avatarUrl }}
                 style={styles.avatar}
                 resizeMode="cover"
             />
@@ -113,9 +137,9 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                     <View style={styles.infoCol}>
                         <View style={styles.nameRow}>
                             <Text style={styles.clientName}>
-                                {clientData?.name || "John Smith"}
+                                {clientData?.name || "Client Name"}
                             </Text>
-                            {clientData?.isVerified !== false && (
+                            {clientData?.isVerified && (
                                 <Image
                                     source={require("../../assets/images/verified.png")}
                                     style={styles.verifiedIcon}
@@ -128,7 +152,7 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                             <Text style={styles.intentLabel}>Property Intent: </Text>
                             <View style={styles.intentBadge}>
                                 <Text style={styles.intentText}>
-                                    {clientData?.intent || "Buy"}
+                                    {clientData?.intent || "N/A"}
                                 </Text>
                             </View>
                         </View>
@@ -140,7 +164,7 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                                 resizeMode="contain"
                             />
                             <Text style={styles.locationText} numberOfLines={1}>
-                                {clientData?.distance || "50 mi away"} | {clientData?.address || "123 Main St,Apt 4B"}
+                                {clientData?.distance || "0 mi"} | {clientData?.address || "N/A"}
                             </Text>
                         </View>
                     </View>
@@ -154,7 +178,7 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                         resizeMode="contain"
                     />
                     <Text style={styles.boxText}>
-                        {clientData?.selectedSlot || "2026-12-11 at 3:00 PM"}
+                        {clientData?.selectedSlot || "Not Selected"}
                     </Text>
                 </View>
 
@@ -166,20 +190,20 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                         resizeMode="contain"
                     />
                     <Text style={styles.boxText}>
-                        {clientData?.budgetRange || "$5000.00 - $50,000.00"}
+                        {clientData?.budgetRange || "Not specified"}
                     </Text>
                 </View>
                 <Text style={styles.sectionLabel}>Property Type</Text>
                 <View style={styles.readOnlyBox}>
                     <Text style={styles.boxText}>
-                        {clientData?.propertyType || "Apartment"}
+                        {clientData?.propertyType || "Not specified"}
                     </Text>
                 </View>
 
                 <Text style={styles.sectionLabel}>Configuration</Text>
                 <View style={styles.readOnlyBox}>
                     <Text style={styles.boxText}>
-                        {clientData?.configuration || "1 BHK"}
+                        {clientData?.configuration || "Not specified"}
                     </Text>
                 </View>
 
@@ -191,14 +215,14 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                         resizeMode="contain"
                     />
                     <Text style={styles.boxText}>
-                        {clientData?.preferredArea || "Jakarta, Indonesia"}
+                        {clientData?.preferredArea || "Not specified"}
                     </Text>
                 </View>
 
                 <Text style={styles.sectionLabel}>Client Notes</Text>
                 <View style={[styles.readOnlyBox, styles.notesBox]}>
                     <Text style={styles.notesText}>
-                        {clientData?.clientNotes || "Prefer to move within 2 months. Have pre-approval from bank."}
+                        {clientData?.clientNotes || "No notes provided."}
                     </Text>
                 </View>
             </ScrollView>
@@ -208,14 +232,21 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                     <TouchableOpacity
                         style={[styles.btn, styles.chatBtn]}
                         activeOpacity={0.8}
-                        onPress={() => console.log("Start Chat Pressed")}
+                        onPress={handleStartChat}
+                        disabled={isStartingChat}
                     >
-                        <Image
-                            source={require("../../assets/images/messagePro.png")}
-                            style={styles.btnIcon}
-                            resizeMode="contain"
-                        />
-                        <Text style={styles.btnText}>Start Chat</Text>
+                        {isStartingChat ? (
+                            <ActivityIndicator size="small" color={COLORS.white} />
+                        ) : (
+                            <>
+                                <Image
+                                    source={require("../../assets/images/messagePro.png")}
+                                    style={styles.btnIcon}
+                                    resizeMode="contain"
+                                />
+                                <Text style={styles.btnText}>Start Chat</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity

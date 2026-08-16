@@ -236,6 +236,7 @@ const LoginScreen = ({ navigation }: SignInScreenProps) => {
                                     title="sign In"
                                     onPress={handleSubmit}
                                     style={styles.primaryBtnSpacing}
+                                    loading={isEmailLoading}
                                 />
                             </View>
                         )}
@@ -274,6 +275,7 @@ const LoginScreen = ({ navigation }: SignInScreenProps) => {
                                     title="Next"
                                     onPress={() => handleSubmit()}
                                     style={styles.primaryBtnSpacing}
+                                    loading={isPhoneLoading}
                                 />
                             </View>
                         )}
@@ -453,14 +455,17 @@ const styles = StyleSheet.create({
     },
     socialRow: {
         flexDirection: 'row',
-        justifyContent: 'space-evenly',
-        marginBottom: 30,
+        justifyContent: 'center',
+        gap: 14,
+        marginBottom: 20,
     },
     socialBtn: {
-        width: 106,
-        height: 48,
-        backgroundColor: COLORS.inputBg,
-        borderRadius: 10,
+        flex: 1,
+        height: 52,
+        backgroundColor: '#1E1E22',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#2C2C30',
         justifyContent: 'center',
         alignItems: 'center',
     },

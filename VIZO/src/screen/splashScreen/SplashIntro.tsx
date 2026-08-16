@@ -9,11 +9,43 @@ import {
     ImageBackground,
     StatusBar,
     Platform,
+    Alert,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { IntroScreenProps } from '../../navigation/types';
 import { COLORS } from '../../constants/Color';
+import { useSocialLoginMutation } from '../../redux/api/authApi';
+import { setCredentials } from '../../redux/slice/authSlice';
+import { socialAuthService } from '../../services/socialAuthService';
+import { navigateAfterAuth } from '../../services/authNavigation';
 
 const SplashIntro = ({ navigation }: IntroScreenProps) => {
+    const dispatch = useDispatch();
+    const [socialLogin] = useSocialLoginMutation();
+
+    const handleSocialAuth = async (provider: "google" | "facebook" | "apple") => {
+        try {
+            let payload: any = { provider };
+
+            if (provider === 'google') {
+                const { idToken } = await socialAuthService.signInWithGoogle();
+                payload.idToken = idToken;
+            } else if (provider === 'facebook') {
+                const { accessToken } = await socialAuthService.signInWithFacebook();
+                payload.accessToken = accessToken;
+            } else {
+                Alert.alert('Coming Soon', 'Apple Sign-In will be configured next.');
+                return;
+            }
+
+            const response = await socialLogin(payload).unwrap();
+            dispatch(setCredentials({ token: response.data.token, user: response.data.user }));
+            navigateAfterAuth(navigation, response.data.user);
+        } catch (error: any) {
+            Alert.alert('Login Failed', error?.message || error?.data?.message || 'Social login failed.');
+        }
+    };
+
     return (
         <ImageBackground
             source={require('../../assets/images/IntroScreen.jpg')}
@@ -47,21 +79,21 @@ const SplashIntro = ({ navigation }: IntroScreenProps) => {
                         <Text style={styles.orText}>──── Or login with ────</Text>
 
                         <View style={styles.socialRow}>
-                            <TouchableOpacity style={styles.socialBtn}>
+                            <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('google')}>
                                 <Image
                                     source={require('../../assets/images/google.png')}
                                     style={styles.socialIcon}
                                     resizeMode="contain"
                                 />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialBtn}>
+                            <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('facebook')}>
                                 <Image
                                     source={require('../../assets/images/facebook.png')}
                                     style={styles.socialIcon}
                                     resizeMode="contain"
                                 />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialBtn}>
+                            <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialAuth('apple')}>
                                 <Image
                                     source={require('../../assets/images/appleCalendarIcon.png')}
                                     style={styles.socialIcon}
@@ -148,14 +180,17 @@ const styles = StyleSheet.create({
     },
     socialRow: {
         flexDirection: 'row',
-        justifyContent: 'space-evenly',
+        justifyContent: 'center',
+        gap: 14,
         marginBottom: 20,
     },
     socialBtn: {
-        width: 106,
-        height: 48,
-        backgroundColor: COLORS.inputBg,
-        borderRadius: 10,
+        flex: 1,
+        height: 52,
+        backgroundColor: '#1E1E22',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#2C2C30',
         justifyContent: 'center',
         alignItems: 'center',
     },

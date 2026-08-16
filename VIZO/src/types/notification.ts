@@ -7,4 +7,5 @@ export interface NotificationItems {
   isRead: boolean;
   section: 'Today' | 'Older notifications';
   targetScreen?: string;
+  targetId?: string;
 }

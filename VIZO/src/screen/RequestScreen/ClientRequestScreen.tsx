@@ -10,6 +10,7 @@ import {
     StatusBar,
     Platform,
     ActivityIndicator,
+    Alert,
 } from "react-native";
 
 import LinearGradient from "react-native-linear-gradient";
@@ -20,40 +21,44 @@ import {
     useGetAllRequestQuery,
     useUpdateRequestStatusMutation,
 } from "../../redux/api/clientRequestApi";
+import { useAccessConversationMutation } from "../../redux/api/chatApi";
 
 const ClientRequestScreen = ({ navigation }: any) => {
     const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
-    // const [request, setRequest] = useState<ClientRequestItem[]>([]);
-    // const [isloading, setIsloading] = useState<boolean>(true);
 
     const { data: request = [], isLoading: isloading } = useGetAllRequestQuery(undefined);
     const [updateRequestStatus] = useUpdateRequestStatusMutation();
+    const [accessConversation, { isLoading: isStartingChat }] = useAccessConversationMutation();
 
-    // useEffect(() => {
-    //     fetchRequest();
-    // }, []);
 
-    // const fetchRequest = async () => {
-    //     setIsloading(true);
-    //     try {
-    //         const data = await clientRequestService.getAllRequests();
-    //         setRequest(data);
-    //     } catch (error) {
-    //         console.log("Failed to fetch client requests");
-    //     } finally {
-    //         setIsloading(false);
-    //     }
-    // };
+
+    const handleStartChat = async (item: ClientRequestItem) => {
+        if (!item.clientUserId) {
+            Alert.alert(
+                "Chat unavailable"
+            );
+            return;
+        }
+        try {
+            const conversation = await accessConversation({
+                receiverId: item.clientUserId,
+                clientRequestId: item.id,
+            }).unwrap();
+
+            navigation.navigate('ChatDetailScreen', {
+                clientData: {
+                    id: conversation.data._id,
+                    name: item.name,
+                    avatarUrl: item.avatarUrl,
+                    rawConversationData: conversation.data,
+                },
+            });
+        } catch (error: any) {
+            Alert.alert('Error', error?.data?.message || 'Could not start chat.');
+        }
+    }
 
     const handleAccept = async (id: string) => {
-        // const success = await clientRequestService.acceptRequest(id);
-        // if (success) {
-        //     setRequest((prev) =>
-        //         prev.map((item) =>
-        //             item.id === id ? { ...item, status: "approved" } : item
-        //         )
-        //     );
-        // }
         try {
             await updateRequestStatus({ id, status: 'approved' }).unwrap();
         } catch (error) {
@@ -62,10 +67,6 @@ const ClientRequestScreen = ({ navigation }: any) => {
     };
 
     const handleCancel = async (id: string) => {
-        // const success = await clientRequestService.cancleRequest(id);
-        // if (success) {
-        //     setRequest((prev) => prev.filter((item) => item.id !== id));
-        // }
         try {
             await updateRequestStatus({ id, status: 'cancelled' }).unwrap();
         } catch (error) {
@@ -181,15 +182,22 @@ const ClientRequestScreen = ({ navigation }: any) => {
                 <View style={styles.actionRow}>
                     <TouchableOpacity
                         style={[styles.btn, styles.chatBtn]}
-                        onPress={() => console.log("Start Chat with:", item.name)}
+                        onPress={() => handleStartChat(item)}
                         activeOpacity={0.8}
+                        disabled={isStartingChat}
                     >
-                        <Image
-                            source={require("../../assets/images/messagePro.png")}
-                            style={styles.btnIconImage}
-                            resizeMode="contain"
-                        />
-                        <Text style={styles.btnText}>Start Chat</Text>
+                        {isStartingChat ? (
+                            <ActivityIndicator size="small" color={COLORS.white} />
+                        ) : (
+                            <>
+                                <Image
+                                    source={require("../../assets/images/messagePro.png")}
+                                    style={styles.btnIconImage}
+                                    resizeMode="contain"
+                                />
+                                <Text style={styles.btnText}>Start Chat</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity

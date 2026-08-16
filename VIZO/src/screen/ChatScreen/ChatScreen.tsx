@@ -11,6 +11,8 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector } from 'react-redux';
@@ -19,7 +21,7 @@ import { COLORS } from '../../constants/Color';
 import { socketService } from '../../services/socketService';
 import { RootState } from '../../redux/store';
 
-import { useGetMyConversationsQuery } from '../../redux/api/chatApi';
+import { useGetMyConversationsQuery, useMarkAllAsReadMutation } from '../../redux/api/chatApi';
 
 interface ConversationItem {
   id: string;
@@ -40,8 +42,10 @@ const ChatScreen = ({ navigation }: any) => {
   const token = useSelector((state: RootState) => state.auth.token);
   const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isOpenMenue, setIsOpenMenue] = useState<boolean>(false);
 
   const { data: rawConversations = [], isLoading, refetch } = useGetMyConversationsQuery(undefined);
+  const [markAllReadApi] = useMarkAllAsReadMutation();
 
   useEffect(() => {
     if (token) {
@@ -84,6 +88,21 @@ const ChatScreen = ({ navigation }: any) => {
   const filteredConversations = parsedConversations.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleMenueAction = async (actionType: string) => {
+    setIsOpenMenue(false);
+    if (actionType === "MARK_READ") {
+      try {
+        await markAllReadApi().unwrap();
+        Alert.alert('Success', 'All conversations marked as read.');
+      } catch (error: any) {
+        Alert.alert('Error', error?.data?.message || 'Failed to mark as read.');
+      }
+    } else if (actionType === 'REFRESH') {
+      refetch();
+    }
+
+  }
 
   const renderConversationItem = ({ item }: { item: ConversationItem }) => (
     <TouchableOpacity
@@ -136,8 +155,10 @@ const ChatScreen = ({ navigation }: any) => {
 
       <View style={styles.headerBar}>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity style={styles.menuBtn}>
-          {/* Replaced Text with Image Tag */}
+        <TouchableOpacity
+          style={styles.menuBtn}
+          onPress={() => setIsOpenMenue(true)}
+        >
           <Image
             source={require('../../assets/images/threeDots.png')}
             style={styles.threeDotsIcon}
@@ -146,8 +167,33 @@ const ChatScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
 
+      {/* Dropdown */}
+      <Modal
+        visible={isOpenMenue}
+        transparent animationType='fade'
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setIsOpenMenue(false)}
+        >
+          <View style={styles.menuDropdownCard}>
+            <TouchableOpacity
+              style={styles.menuItemRow}
+              onPress={() => handleMenueAction('MARK_READ')}
+            >
+              <Text style={styles.menuItemText}>Mark all as read</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuItemRow, { borderBottomWidth: 0 }]} onPress={() => handleMenueAction('REFRESH')}>
+              <Text style={styles.menuItemText}>Refresh Chats</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+
+      </Modal>
+
       <View style={styles.searchBarContainer}>
-        {/* Replaced Search Emoji with Image Tag */}
         <Image
           source={require('../../assets/images/searchIcon.png')}
           style={styles.searchIcon}
@@ -218,12 +264,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   menuBtn: {
-    padding: 4,
+    padding: 6,
   },
   threeDotsIcon: {
     width: 18,
     height: 18,
     tintColor: COLORS.white,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  menuDropdownCard: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 50 : 60,
+    right: 18,
+    backgroundColor: '#1E1E22',
+    borderRadius: 12,
+    paddingVertical: 6,
+    width: 200,
+    borderWidth: 1,
+    borderColor: '#2C2C30',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  menuItemRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#28282C',
+  },
+  menuItemText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '500',
   },
   searchBarContainer: {
     flexDirection: 'row',

@@ -41,6 +41,7 @@ export const notificationApi = baseApi.injectEndpoints({
                     isRead: item.isRead,
                     section: isToday(item.createdAt) ? 'Today' : 'Older notifications',
                     targetScreen: item.targetScreen,
+                    targetId: item.targetId,
                 }));
             },
         }),

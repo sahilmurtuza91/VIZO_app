@@ -26,40 +26,10 @@ import { logout } from '../../redux/slice/authSlice';
 
 const MyProfileScreen = ({ navigation }: any) => {
     const dispatch = useDispatch();
-    // const [profile, setProfile] = useState<UserProfile | null>(null);
-    // const [isloading, setIsloading] = useState<boolean>(true);
-
-    // const [isUpdateOnlineOfflineStatus, setIsUpdateOnlineOfflineStatus] = useState<boolean>(false);
-
     const { data: profile, isLoading } = useGetProfileQuery(undefined);
     const [toggleAvailability, { isLoading: isUpdatingStatus }] = useToggleAvailabilityMutation();
 
-    // useEffect(() => {
-    //     fetchProfile();
-    // }, []);
-
-    // const fetchProfile = async () => {
-    //     try {
-    //         const data = await profileService.getUserProfile();
-    //         setProfile(data);
-    //     } catch (error) {
-    //         console.log("Error in loading the profile data");
-    //     } finally {
-    //         setIsloading(false);
-    //     }
-    // }
-
     const handleOnlineOfflineStatus = async (value: boolean) => {
-        // if (!profile) return;
-        // setIsUpdateOnlineOfflineStatus(true);
-        // try {
-        //     await profileService.toggleOnlineOfflineStatus(value);
-        //     setProfile({ ...profile, isOnline: value });
-        // } catch (error) {
-        //     Alert.alert('Error', 'Failed to update online status.');
-        // } finally {
-        //     setIsUpdateOnlineOfflineStatus(false);
-        // }
         try {
             await toggleAvailability(value).unwrap();
         } catch (error: any) {
@@ -149,7 +119,11 @@ const MyProfileScreen = ({ navigation }: any) => {
                             <Text style={styles.ratingText}>{profile.rating}</Text>
                         </View>
                     </View>
-                    <View style={styles.specialtyTagsRow}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.specialtyScrollRow}
+                    >
                         {profile.specialties.map((tag: string, idx: number) => (
                             <View
                                 key={idx}
@@ -165,7 +139,7 @@ const MyProfileScreen = ({ navigation }: any) => {
                                 <Text style={styles.tagText}>{tag}</Text>
                             </View>
                         ))}
-                    </View>
+                    </ScrollView>
 
                     <View style={styles.experienceRow}>
                         <Image
@@ -401,10 +375,15 @@ const styles = StyleSheet.create({
         gap: 8,
         marginBottom: 8,
     },
+    // NEW: horizontal-scroll row for specialty tags (see render above).
+    specialtyScrollRow: {
+        marginBottom: 8,
+    },
     tagPill: {
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
+        marginRight: 8,
     },
     tagOrange: {
         backgroundColor: '#FF6B00',

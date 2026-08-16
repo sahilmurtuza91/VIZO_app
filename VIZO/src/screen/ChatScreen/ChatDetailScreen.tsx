@@ -12,6 +12,9 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Alert,
+  Keyboard,
+  Modal,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector } from 'react-redux';
@@ -20,18 +23,43 @@ import { COLORS } from '../../constants/Color';
 import { socketService } from "../../services/socketService";
 import { RootState } from '../../redux/store';
 
-import { useGetMessagesQuery } from '../../redux/api/chatApi';
+import { 
+  useGetMessagesQuery, 
+  useSendMessageMutation,
+  useClearChatMutation,
+  useToggleMuteChatMutation
+} from '../../redux/api/chatApi';
 
 interface ChatMessage {
   id: string;
   senderId: string;
   text: string;
   time: string;
+  rawDate: Date;
   senderAvatar: string;
   isMe: boolean;
 }
 
 const DEFAULT_AVATAR = require('../../assets/images/profile.png');
+
+const formatMessageDateGroup = (dateInput: Date | string) => {
+  const d = new Date(dateInput);
+  const now = new Date();
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  if (msgDate.getTime() === today.getTime()) {
+    return 'Today';
+  } else if (msgDate.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  } else {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+};
 
 const ChatDetailScreen = ({ navigation, route }: any) => {
   const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
@@ -40,34 +68,51 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
 
   const conversationId = clientData?.id || clientData?._id;
 
+  // 🟢 Safely extract the target recipient's user ID
+  const targetUserId =
+    clientData?.partnerId ||
+    clientData?.rawConversationData?.participants?.find(
+      (p: any) => (p._id || p.id || p)?.toString() !== currentUserId?.toString()
+    )?._id ||
+    clientData?.userId ||
+    clientData?.id ||
+    clientData?._id;
+
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const { data: initialHistory = [], isLoading } = useGetMessagesQuery(conversationId, {
     skip: !conversationId,
   });
+  const [sendMessageRest] = useSendMessageMutation();
+  const [clearChatApi] = useClearChatMutation();
+  const [toggleMuteApi] = useToggleMuteChatMutation();
+  const [isSending, setIsSending] = useState(false);
+
+  const mapServerMessage = (m: any): ChatMessage => {
+    const senderObj = m.sender || {};
+    const senderId = senderObj._id || senderObj.id || senderObj;
+    const isMe = senderId?.toString() === currentUserId?.toString();
+    const createdDate = m.createdAt ? new Date(m.createdAt) : new Date();
+
+    return {
+      id: m._id || m.id,
+      senderId,
+      text: m.text || '',
+      time: createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      rawDate: createdDate,
+      senderAvatar: senderObj.avatarUrl || clientData?.avatarUrl || '',
+      isMe,
+    };
+  };
 
   useEffect(() => {
     if (initialHistory.length > 0) {
-      const formatted = initialHistory.map((m: any) => {
-        const senderObj = m.sender || {};
-        const senderId = senderObj._id || senderObj.id || senderObj;
-        const isMe = senderId?.toString() === currentUserId?.toString();
-
-        return {
-          id: m._id || m.id,
-          senderId,
-          text: m.text || '',
-          time: m.createdAt
-            ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            : '12:00PM',
-          senderAvatar: senderObj.avatarUrl || '',
-          isMe,
-        };
-      });
-      setMessages(formatted);
+      setMessages(initialHistory.map(mapServerMessage));
     }
   }, [initialHistory, currentUserId]);
 
@@ -80,20 +125,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
     socketService.emit('join_conversation', conversationId);
 
     socketService.on('receive_message', (socketMsg: any) => {
-      const senderObj = socketMsg.sender || {};
-      const senderId = senderObj._id || senderObj.id || senderObj;
-      const isMe = senderId?.toString() === currentUserId?.toString();
-
-      const newMsgObj: ChatMessage = {
-        id: socketMsg._id || socketMsg.id || Date.now().toString(),
-        senderId,
-        text: socketMsg.text || '',
-        time: socketMsg.createdAt
-          ? new Date(socketMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        senderAvatar: senderObj.avatarUrl || clientData?.avatarUrl || '',
-        isMe,
-      };
+      const newMsgObj = mapServerMessage(socketMsg);
 
       setMessages((prev) => {
         if (prev.some((msg) => msg.id === newMsgObj.id)) return prev;
@@ -109,7 +141,17 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
       if (userId !== currentUserId) setIsTyping(false);
     });
 
+    const keyboardListener = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+
     return () => {
+      keyboardListener.remove();
       socketService.emit('leave_conversation', conversationId);
       socketService.off('receive_message');
       socketService.off('user_typing');
@@ -117,18 +159,27 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
     };
   }, [conversationId, currentUserId, clientData?.avatarUrl, token]);
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || isSending) return;
 
     const messageText = inputText.trim();
     setInputText('');
-
-    socketService.emit('send_message', {
-      conversationId,
-      text: messageText,
-    });
-
     socketService.emit('stop_typing', { conversationId });
+    setIsSending(true);
+
+    try {
+      const response = await sendMessageRest({ conversationId, text: messageText }).unwrap();
+      const sentMessage = mapServerMessage(response.data);
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.id === sentMessage.id)) return prev;
+        return [...prev, sentMessage];
+      });
+    } catch (error: any) {
+      setInputText(messageText);
+      Alert.alert('Message not sent', error?.data?.message || 'Check your connection and try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleInputChange = (text: string) => {
@@ -140,26 +191,112 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
     }
   };
 
-  const renderBubbleItem = ({ item }: { item: ChatMessage }) => {
-    if (item.isMe) {
-      return (
-        <View style={styles.myBubbleRow}>
-          <View style={styles.myBubbleContainer}>
-            <Text style={styles.myBubbleText}>{item.text}</Text>
-            <Text style={styles.myTimeText}>{item.time}</Text>
-          </View>
-          <Image source={item.senderAvatar ? { uri: item.senderAvatar } : DEFAULT_AVATAR} style={styles.bubbleAvatar} />
-        </View>
-      );
+  const handleDetailMenuAction = async (actionType: string) => {
+    setIsMenuOpen(false);
+
+    if ((actionType === 'AUDIO_CALL' || actionType === 'VIDEO_CALL') && !targetUserId) {
+      Alert.alert('Call Error', 'Recipient user ID not found. Please try again.');
+      return;
     }
 
+    switch (actionType) {
+      case 'AUDIO_CALL':
+        socketService.emit('call_user', {
+          toUserId: targetUserId,
+          conversationId,
+          callType: 'audio',
+          offer: { type: 'offer', sdp: 'vizo_webrtc_audio_offer' },
+        });
+        navigation.navigate('AudioCallScreen', { clientData, isIncoming: false });
+        break;
+
+      case 'VIDEO_CALL':
+        socketService.emit('call_user', {
+          toUserId: targetUserId,
+          conversationId,
+          callType: 'video',
+          offer: { type: 'offer', sdp: 'vizo_webrtc_video_offer' },
+        });
+        navigation.navigate('VideoCallScreen', { clientData, isIncoming: false });
+        break;
+
+      case 'VIEW_PROFILE':
+        navigation.navigate('ClientDetail', { clientData });
+        break;
+
+      case 'MUTE':
+        try {
+          const res = await toggleMuteApi(conversationId).unwrap();
+          setIsMuted(res.data?.isMuted);
+          Alert.alert('Notification', res.message || 'Updated mute status.');
+        } catch (err: any) {
+          Alert.alert('Error', err?.data?.message || 'Failed to update mute status.');
+        }
+        break;
+
+      case 'CLEAR_CHAT':
+        Alert.alert('Clear Chat', 'Are you sure you want to delete all messages in this conversation?', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Clear',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await clearChatApi(conversationId).unwrap();
+                setMessages([]);
+                navigation.goBack();
+              } catch (err: any) {
+                Alert.alert('Error', err?.data?.message || 'Failed to clear chat.');
+              }
+            },
+          },
+        ]);
+        break;
+    }
+  };
+
+  const renderBubbleItem = ({ item, index }: { item: ChatMessage; index: number }) => {
+    const isFirstMessage = index === 0;
+    const prevMessage = index > 0 ? messages[index - 1] : null;
+
+    const currentDateGroup = formatMessageDateGroup(item.rawDate);
+    const prevDateGroup = prevMessage ? formatMessageDateGroup(prevMessage.rawDate) : null;
+
+    const shouldShowDatePill = isFirstMessage || currentDateGroup !== prevDateGroup;
+
     return (
-      <View style={styles.otherBubbleRow}>
-        <Image source={item.senderAvatar ? { uri: item.senderAvatar } : DEFAULT_AVATAR} style={styles.bubbleAvatar} />
-        <View style={styles.otherBubbleContainer}>
-          <Text style={styles.otherBubbleText}>{item.text}</Text>
-          <Text style={styles.otherTimeText}>{item.time}</Text>
-        </View>
+      <View>
+        {shouldShowDatePill && (
+          <View style={styles.datePillContainer}>
+            <View style={styles.datePillBadge}>
+              <Text style={styles.datePillText}>{currentDateGroup}</Text>
+            </View>
+          </View>
+        )}
+
+        {item.isMe ? (
+          <View style={styles.myBubbleRow}>
+            <View style={styles.myBubbleContainer}>
+              <Text style={styles.myBubbleText}>{item.text}</Text>
+              <Text style={styles.myTimeText}>{item.time}</Text>
+            </View>
+            <Image
+              source={item.senderAvatar ? { uri: item.senderAvatar } : DEFAULT_AVATAR}
+              style={styles.bubbleAvatar}
+            />
+          </View>
+        ) : (
+          <View style={styles.otherBubbleRow}>
+            <Image
+              source={item.senderAvatar ? { uri: item.senderAvatar } : DEFAULT_AVATAR}
+              style={styles.bubbleAvatar}
+            />
+            <View style={styles.otherBubbleContainer}>
+              <Text style={styles.otherBubbleText}>{item.text}</Text>
+              <Text style={styles.otherTimeText}>{item.time}</Text>
+            </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -196,15 +333,17 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
           />
         </TouchableOpacity>
 
-        <Image source={clientData?.avatarUrl ? { uri: clientData.avatarUrl } : DEFAULT_AVATAR} style={styles.headerAvatar} />
+        <Image
+          source={clientData?.avatarUrl ? { uri: clientData.avatarUrl } : DEFAULT_AVATAR}
+          style={styles.headerAvatar}
+        />
 
         <View style={styles.headerTitleCol}>
           <Text style={styles.headerNameText}>{clientData.name}</Text>
           {isTyping && <Text style={styles.typingSubtext}>typing...</Text>}
         </View>
 
-        <TouchableOpacity style={styles.menuBtn}>
-          {/* Replaced Text with Image Tag */}
+        <TouchableOpacity style={styles.menuBtn} onPress={() => setIsMenuOpen(true)}>
           <Image
             source={require('../../assets/images/threeDots.png')}
             style={styles.threeDotsIcon}
@@ -213,15 +352,37 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.datePillContainer}>
-        <View style={styles.datePillBadge}>
-          <Text style={styles.datePillText}>Today</Text>
-        </View>
-      </View>
+      {/* Three-Dot Menu Modal */}
+      <Modal visible={isMenuOpen} transparent animationType="fade">
+        <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setIsMenuOpen(false)}>
+          <View style={styles.detailMenuCard}>
+            <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('AUDIO_CALL')}>
+              <Text style={styles.menuItemText}>📞  Audio Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('VIDEO_CALL')}>
+              <Text style={styles.menuItemText}>📹  Video Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('VIEW_PROFILE')}>
+              <Text style={styles.menuItemText}>👤  View Client Profile</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('MUTE')}>
+              <Text style={styles.menuItemText}>{isMuted ? '🔔  Unmute Chat' : '🔕  Mute Chat'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItemRow, { borderBottomWidth: 0 }]} onPress={() => handleDetailMenuAction('CLEAR_CHAT')}>
+              <Text style={[styles.menuItemText, { color: COLORS.red }]}>🗑️  Clear Chat</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.keyboardAvoidContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
       >
         {isLoading ? (
           <View style={styles.loaderCenter}>
@@ -235,7 +396,9 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
             renderItem={renderBubbleItem}
             contentContainerStyle={styles.messagesListContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
           />
         )}
 
@@ -250,19 +413,22 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
             />
           </View>
 
-          <TouchableOpacity style={styles.sendGlowBtn} onPress={handleSendMessage}>
+          <TouchableOpacity style={styles.sendGlowBtn} onPress={handleSendMessage} disabled={isSending}>
             <LinearGradient
               colors={['#FF1616', '#FF7A00']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.sendBtnGradient}
             >
-              {/* Replaced Text Arrow with Image Tag */}
-              <Image
-                source={require('../../assets/images/sendArrowIcon.png')}
-                style={styles.sendIcon}
-                resizeMode="contain"
-              />
+              {isSending ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Image
+                  source={require('../../assets/images/sendArrowIcon.png')}
+                  style={styles.sendIcon}
+                  resizeMode="contain"
+                />
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -279,12 +445,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.black,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  keyboardAvoidContainer: {
+    flex: 1,
+  },
   topGlowLayer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 380,
+    height: 550,
     opacity: 0.25,
   },
   loaderCenter: {
@@ -330,16 +499,47 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   menuBtn: {
-    padding: 4,
+    padding: 6,
   },
   threeDotsIcon: {
     width: 18,
     height: 18,
     tintColor: COLORS.white,
   },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  detailMenuCard: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 48 : 58,
+    right: 16,
+    backgroundColor: '#1E1E22',
+    borderRadius: 12,
+    paddingVertical: 6,
+    width: 220,
+    borderWidth: 1,
+    borderColor: '#2C2C30',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  menuItemRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#28282C',
+  },
+  menuItemText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '500',
+  },
   datePillContainer: {
     alignItems: 'center',
-    marginVertical: 12,
+    marginVertical: 14,
   },
   datePillBadge: {
     backgroundColor: '#CC0000',
@@ -354,7 +554,9 @@ const styles = StyleSheet.create({
   },
   messagesListContent: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 16,
+    flexGrow: 1,
+    justifyContent: 'flex-end',
   },
   otherBubbleRow: {
     flexDirection: 'row',

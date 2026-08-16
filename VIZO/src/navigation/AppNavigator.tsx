@@ -42,6 +42,9 @@ import InviteAndEarnScreen from '../screen/RefralScreen/InviteAndEarnScreen/Invi
 import WorkingHoursScreen from '../screen/SettingScreen/WorkingHours/WorkingHoursScreen';
 import SelectCalendarScreen from '../screen/SettingScreen/WorkingHours/SelectCalendarScreen';
 
+import AudioCallScreen from '../screen/CallingScreen/AudioCallScreen';
+import VideoCallScreen from '../screen/CallingScreen/VideoCallScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AppNavigator = () => {
     return (
@@ -91,6 +94,17 @@ const AppNavigator = () => {
                 <Stack.Screen name='InviteAndEarnScreen' component={InviteAndEarnScreen} />
                 <Stack.Screen name='WorkingHoursScreen' component={WorkingHoursScreen} />
                 <Stack.Screen name='SelectCalendarScreen' component={SelectCalendarScreen} />
+
+                <Stack.Screen
+                    name="AudioCallScreen"
+                    component={AudioCallScreen}
+                    options={{ gestureEnabled: false }}
+                />
+                <Stack.Screen
+                    name="VideoCallScreen"
+                    component={VideoCallScreen}
+                    options={{ gestureEnabled: false }}
+                />
 
             </Stack.Navigator>
         </NavigationContainer>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Switch } from 'react-native';
 import { COLORS } from "../constants/Color";
 import { useNavigation } from '@react-navigation/native';
+import LocationPickerModal from './LocationPickerModal';
+import { useUpdateLocationMutation } from '../redux/api/profileApi';
 
 interface HeaderSectionProps {
     location?: string;
@@ -16,10 +18,14 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     onNotificationPress,
     isAvailable: isAvailableProp,
     onToggleAvailability,
-    unreadCount = 5,
+    unreadCount = 0,
 }) => {
     const [localIsAvailable, setLocalIsAvailable] = useState<boolean>(true);
     const isAvailable = isAvailableProp !== undefined ? isAvailableProp : localIsAvailable;
+
+    const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
+    const [updateLocation] = useUpdateLocationMutation();
+
 
     const toggleSwitch = () => {
         if (onToggleAvailability) {
@@ -27,6 +33,18 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
         } else {
             setLocalIsAvailable((prev) => !prev);
         }
+    }
+
+    const handleSaveLocation = async (payload: { lat?: number; lng?: number; cityLabel: string }) => {
+        await updateLocation({
+            lat: payload.lat ?? 0,
+            lng: payload.lng ?? 0,
+            cityLabel: payload.cityLabel,
+        }).unwrap();
+    }
+
+    const handleClearLocation = async () => {
+        await updateLocation({ lat: 0, lng: 0, cityLabel: "" }).unwrap();
     }
 
     return (
@@ -79,6 +97,12 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                     resizeMode="contain"
                 />
             </TouchableOpacity>
+            <LocationPickerModal
+                visible={isLocationModalVisible}
+                onClose={() => setIsLocationModalVisible(false)}
+                onSave={handleSaveLocation}
+                onClear={handleClearLocation}
+            />
         </View>
     );
 };
@@ -91,6 +115,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginVertical: 15,
+        marginHorizontal:10,
     },
     locationPill: {
         flexDirection: 'row',
@@ -100,7 +125,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: COLORS.borderDark,
+        // borderColor: COLORS.borderDark,
     },
     pinIcon: {
         width: 14,

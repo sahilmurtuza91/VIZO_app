@@ -25,7 +25,9 @@ const getCurrentSubscription = asyncHandler(async (req, res, next) => {
     const subscription = await UserSubscription.findOne({
         user: req.user._id,
         status: "active",
-    }).populate("plan");
+    })
+        .sort({ startDate: -1, createdAt: -1 })
+        .populate("plan");
 
     if (!subscription) {
         return sendSuccess(res, 200, "No active subscription found.", {
@@ -135,6 +137,15 @@ const verifySubscriptionPayment = asyncHandler(async (req, res, next) => {
     } else {
         expiryDate.setMonth(expiryDate.getMonth() + 1);
     }
+
+    await UserSubscription.updateMany(
+        {
+            user: req.user._id,
+            status: "active",
+            _id: { $ne: subscription._id },
+        },
+        { $set: { status: "expired" } }
+    );
 
     // update UserSubscriptiom status
     subscription.status = "active";
