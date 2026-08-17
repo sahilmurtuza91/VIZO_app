@@ -15,6 +15,7 @@ import {
   Alert,
   Keyboard,
   Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector } from 'react-redux';
@@ -68,7 +69,6 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
 
   const conversationId = clientData?.id || clientData?._id;
 
-  // 🟢 Safely extract the target recipient's user ID
   const targetUserId =
     clientData?.partnerId ||
     clientData?.rawConversationData?.participants?.find(
@@ -131,6 +131,9 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         if (prev.some((msg) => msg.id === newMsgObj.id)) return prev;
         return [...prev, newMsgObj];
       });
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     });
 
     socketService.on('user_typing', ({ userId }: any) => {
@@ -142,7 +145,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
     });
 
     const keyboardListener = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       () => {
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
@@ -174,6 +177,9 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         if (prev.some((msg) => msg.id === sentMessage.id)) return prev;
         return [...prev, sentMessage];
       });
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 50);
     } catch (error: any) {
       setInputText(messageText);
       Alert.alert('Message not sent', error?.data?.message || 'Check your connection and try again.');
@@ -324,6 +330,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         style={styles.topGlowLayer}
       />
 
+      {/* Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Image
@@ -352,7 +359,6 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         </TouchableOpacity>
       </View>
 
-      {/* Three-Dot Menu Modal */}
       <Modal visible={isMenuOpen} transparent animationType="fade">
         <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setIsMenuOpen(false)}>
           <View style={styles.detailMenuCard}>
@@ -382,55 +388,57 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {isLoading ? (
-          <View style={styles.loaderCenter}>
-            <ActivityIndicator size="large" color={COLORS.orange} />
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderBubbleItem}
-            contentContainerStyle={styles.messagesListContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          />
-        )}
-
-        <View style={styles.bottomBar}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              placeholder="Message..."
-              placeholderTextColor="#66666A"
-              value={inputText}
-              onChangeText={handleInputChange}
-              style={styles.textInput}
+        <View style={styles.innerContainer}>
+          {isLoading ? (
+            <View style={styles.loaderCenter}>
+              <ActivityIndicator size="large" color={COLORS.orange} />
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderBubbleItem}
+              contentContainerStyle={styles.messagesListContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
             />
-          </View>
+          )}
 
-          <TouchableOpacity style={styles.sendGlowBtn} onPress={handleSendMessage} disabled={isSending}>
-            <LinearGradient
-              colors={['#FF1616', '#FF7A00']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.sendBtnGradient}
-            >
-              {isSending ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : (
-                <Image
-                  source={require('../../assets/images/sendArrowIcon.png')}
-                  style={styles.sendIcon}
-                  resizeMode="contain"
-                />
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+          <View style={styles.bottomBar}>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                placeholder="Message..."
+                placeholderTextColor="#66666A"
+                value={inputText}
+                onChangeText={handleInputChange}
+                style={styles.textInput}
+              />
+            </View>
+
+            <TouchableOpacity style={styles.sendGlowBtn} onPress={handleSendMessage} disabled={isSending}>
+              <LinearGradient
+                colors={['#FF1616', '#FF7A00']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.sendBtnGradient}
+              >
+                {isSending ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <Image
+                    source={require('../../assets/images/sendArrowIcon.png')}
+                    style={styles.sendIcon}
+                    resizeMode="contain"
+                  />
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -447,6 +455,10 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidContainer: {
     flex: 1,
+  },
+  innerContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   topGlowLayer: {
     position: 'absolute',
@@ -556,7 +568,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     flexGrow: 1,
-    justifyContent: 'flex-end',
   },
   otherBubbleRow: {
     flexDirection: 'row',

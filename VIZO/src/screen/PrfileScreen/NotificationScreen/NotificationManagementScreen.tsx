@@ -52,10 +52,6 @@ const NotificationManagementScreen = ({ navigation }: any) => {
     }, [profile]);
 
     const handleToggle = (key: keyof NotificationSettings) => {
-        // setNotificationSettings((prev) => ({
-        //     ...prev,
-        //     [key]: !prev[key],
-        // }));
         const newValue = !notificationSettings[key];
         setNotificationSettings((prev) => ({
             ...prev,

@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector } from 'react-redux';
@@ -35,7 +36,6 @@ interface ConversationItem {
   rawConversationData?: any;
 }
 
-// Default Fallback Image
 const DEFAULT_AVATAR = require('../../assets/images/profile.png');
 
 const ChatScreen = ({ navigation }: any) => {
@@ -43,8 +43,9 @@ const ChatScreen = ({ navigation }: any) => {
   const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpenMenue, setIsOpenMenue] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: rawConversations = [], isLoading, refetch } = useGetMyConversationsQuery(undefined);
+  const { data: rawConversations = [], isLoading, isFetching, refetch } = useGetMyConversationsQuery(undefined);
   const [markAllReadApi] = useMarkAllAsReadMutation();
 
   useEffect(() => {
@@ -89,9 +90,21 @@ const ChatScreen = ({ navigation }: any) => {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // 🟢 Fix: Immediate and visual feedback for Refetch
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch().unwrap();
+    } catch (err) {
+      console.log('Refresh error:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleMenueAction = async (actionType: string) => {
     setIsOpenMenue(false);
-    if (actionType === "MARK_READ") {
+    if (actionType === 'MARK_READ') {
       try {
         await markAllReadApi().unwrap();
         Alert.alert('Success', 'All conversations marked as read.');
@@ -99,10 +112,9 @@ const ChatScreen = ({ navigation }: any) => {
         Alert.alert('Error', error?.data?.message || 'Failed to mark as read.');
       }
     } else if (actionType === 'REFRESH') {
-      refetch();
+      handleManualRefresh();
     }
-
-  }
+  };
 
   const renderConversationItem = ({ item }: { item: ConversationItem }) => (
     <TouchableOpacity
@@ -170,7 +182,8 @@ const ChatScreen = ({ navigation }: any) => {
       {/* Dropdown */}
       <Modal
         visible={isOpenMenue}
-        transparent animationType='fade'
+        transparent
+        animationType="fade"
       >
         <TouchableOpacity
           style={styles.menuOverlay}
@@ -182,15 +195,16 @@ const ChatScreen = ({ navigation }: any) => {
               style={styles.menuItemRow}
               onPress={() => handleMenueAction('MARK_READ')}
             >
-              <Text style={styles.menuItemText}>Mark all as read</Text>
+              <Text style={styles.menuItemText}>✓✓  Mark all as read</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.menuItemRow, { borderBottomWidth: 0 }]} onPress={() => handleMenueAction('REFRESH')}>
-              <Text style={styles.menuItemText}>Refresh Chats</Text>
+              style={[styles.menuItemRow, { borderBottomWidth: 0 }]}
+              onPress={() => handleMenueAction('REFRESH')}
+            >
+              <Text style={styles.menuItemText}>🔄  Refresh Chats</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
-
       </Modal>
 
       <View style={styles.searchBarContainer}>
@@ -208,7 +222,7 @@ const ChatScreen = ({ navigation }: any) => {
         />
       </View>
 
-      {isLoading ? (
+      {isLoading && !isRefreshing ? (
         <View style={styles.loaderCenter}>
           <ActivityIndicator size="large" color={COLORS.orange} />
         </View>
@@ -220,6 +234,14 @@ const ChatScreen = ({ navigation }: any) => {
           ItemSeparatorComponent={() => <View style={styles.dividerLine} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing || isFetching}
+              onRefresh={handleManualRefresh}
+              tintColor={COLORS.orange}
+              colors={[COLORS.orange]}
+            />
+          }
           ListEmptyComponent={
             <Text style={styles.emptyText}>No messages found.</Text>
           }

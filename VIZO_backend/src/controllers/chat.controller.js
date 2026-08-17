@@ -177,7 +177,7 @@ const markAllAsRead = asyncHandler(async (req, res, next) => {
     return sendSuccess(res, 200, "All conversations marked as read.");
 });
 
-const clearConversationMessages = asyncHandler(async (res, res, next) => {
+const clearConversationMessages = asyncHandler(async (req, res, next) => {
     const { conversationId } = req.params;
     const conversation = await Conversation.findOne({
         _id: conversationId,

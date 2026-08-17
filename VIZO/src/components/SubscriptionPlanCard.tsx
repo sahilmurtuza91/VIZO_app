@@ -28,9 +28,9 @@ const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
 
     const Price = () => {
         if (billingCycle === 'monthly') {
-            return `$${plan.monthlyPrice}/month`;
+            return `₹${plan.monthlyPrice}/month`;
         }
-        return `$${plan.annualPricePerMonth}/month`;
+        return `₹${plan.annualPricePerMonth}/month`;
     };
 
     const renderGemIcon = () => {
