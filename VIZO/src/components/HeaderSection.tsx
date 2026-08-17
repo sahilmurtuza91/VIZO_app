@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Switch } from 'react-native';
 import { COLORS } from "../constants/Color";
-import { useNavigation } from '@react-navigation/native';
 import LocationPickerModal from './LocationPickerModal';
 import { useUpdateLocationMutation } from '../redux/api/profileApi';
 
@@ -28,14 +27,13 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
     const [updateLocation] = useUpdateLocationMutation();
 
-
     const toggleSwitch = () => {
         if (onToggleAvailability) {
             onToggleAvailability(!isAvailable);
         } else {
             setLocalIsAvailable((prev) => !prev);
         }
-    }
+    };
 
     const handleSaveLocation = async (payload: { lat?: number; lng?: number; cityLabel: string }) => {
         await updateLocation({
@@ -43,18 +41,18 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
             lng: payload.lng ?? 0,
             cityLabel: payload.cityLabel,
         }).unwrap();
-    }
+    };
 
     const handleClearLocation = async () => {
         await updateLocation({ lat: 0, lng: 0, cityLabel: "" }).unwrap();
-    }
+    };
 
     return (
         <View style={styles.container}>
             <TouchableOpacity
                 style={styles.locationPill}
                 activeOpacity={0.7}
-                onPress={()=> setIsLocationModalVisible(true)}
+                onPress={() => setIsLocationModalVisible(true)}
             >
                 <Image
                     source={require("../assets/images/location.png")}
@@ -64,54 +62,57 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                 <Text style={styles.locationText} numberOfLines={1}>
                     {location}
                 </Text>
-                <TouchableOpacity>
-                    <Image
-                        source={require('../assets/images/Arrow - Down 3.png')}
-                        style={styles.downArrow}
-                        resizeMode='contain'
-                    />
-                </TouchableOpacity>
-            </TouchableOpacity>
-
-            <View style={styles.switchRow}>
-                <Text style={styles.availableText}>
-                    {isAvailable ? 'Available' : 'Offline'}
-                </Text>
-                <Switch
-                    trackColor={{ false: '#3A3A3C', true: COLORS.red }}
-                    thumbColor={COLORS.white}
-                    onValueChange={toggleSwitch}
-                    value={isAvailable}
-                    style={styles.switch}
-                />
-            </View>
-            <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={onNotificationPress}
-            >
                 <Image
-                    source={require("../assets/images/notification.png")}
-                    style={styles.controlIcon}
+                    source={require('../assets/images/Arrow - Down 3.png')}
+                    style={styles.downArrow}
                     resizeMode='contain'
                 />
-                {unreadCount > 0 && (
-                    <View style={styles.badge}>
+            </TouchableOpacity>
+
+            <View style={styles.rightControls}>
+                <View style={styles.switchRow}>
+                    <Text style={styles.availableText}>
+                        {isAvailable ? 'Available' : 'Offline'}
+                    </Text>
+                    <Switch
+                        trackColor={{ false: '#3A3A3C', true: COLORS.red }}
+                        thumbColor={COLORS.white}
+                        onValueChange={toggleSwitch}
+                        value={isAvailable}
+                        style={styles.switch}
+                    />
+                </View>
+
+                <TouchableOpacity
+                    style={styles.iconBtn}
+                    onPress={onNotificationPress}
+                >
+                    <Image
+                        source={require("../assets/images/notification.png")}
+                        style={styles.controlIcon}
+                        resizeMode='contain'
+                    />
+                    {unreadCount > 0 && (
+                        <View style={styles.badge}>
                             <Text style={styles.badgeText}>
                                 {unreadCount > 99 ? '99+' : unreadCount}
                             </Text>
                         </View>
-                )}
-            </TouchableOpacity>
-            <TouchableOpacity 
-                style={styles.iconBtn}
-                onPress={onSubscriptionPress}    
-            >
-                <Image
-                    source={require('../assets/images/crown.png')}
-                    style={styles.controlIcon}
-                    resizeMode="contain"
-                />
-            </TouchableOpacity>
+                    )}
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    style={styles.iconBtn}
+                    onPress={onSubscriptionPress}    
+                >
+                    <Image
+                        source={require('../assets/images/crown.png')}
+                        style={styles.controlIcon}
+                        resizeMode="contain"
+                    />
+                </TouchableOpacity>
+            </View>
+
             <LocationPickerModal
                 visible={isLocationModalVisible}
                 onClose={() => setIsLocationModalVisible(false)}
@@ -122,26 +123,27 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     );
 };
 
-export default HeaderSection
+export default HeaderSection;
 
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginVertical: 15,
-        marginHorizontal: 10,
+        marginVertical: 12,
+        marginHorizontal: 16,
     },
     locationPill: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
-        maxWidth: '42%',
-        paddingHorizontal: 10,
-        paddingVertical: 7,
+        maxWidth: '44%',
+        backgroundColor: '#1E1E20',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        // borderColor: '#2C2C2E',
+        borderColor: '#2C2C2E',
     },
     pinIcon: {
         width: 14,
@@ -168,13 +170,13 @@ const styles = StyleSheet.create({
     switchRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginRight: 10,
+        marginRight: 6,
     },
     availableText: {
         color: COLORS.white,
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '600',
-        marginRight: 6,
+        marginRight: 4,
     },
     switch: {
         transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
@@ -205,7 +207,7 @@ const styles = StyleSheet.create({
     },
     badgeText: {
         color: COLORS.white,
-        fontSize: 9,
+        fontSize: 8,
         fontWeight: 'bold',
     },
-})
+});

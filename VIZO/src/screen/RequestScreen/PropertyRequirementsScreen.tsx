@@ -16,7 +16,6 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import { COLORS } from "../../constants/Color";
 import { ClientRequestItem } from "../../types/clientRequests";
-// import { clientRequestService } from "../../services/clientRequestService";
 import { useRequestReviewMutation, useUpdateRequestStatusMutation } from "../../redux/api/clientRequestApi";
 import { useAccessConversationMutation } from "../../redux/api/chatApi";
 
@@ -27,9 +26,11 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
         clientData?.isReviewRequested || false
     );
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [isStartingChat, setIsStartingChat] = useState<boolean>(false);
+
     const [requestReview] = useRequestReviewMutation();
     const [updateRequestStatus] = useUpdateRequestStatusMutation();
-    const [accessConversation, { isLoading: isStartingChat }] = useAccessConversationMutation();
+    const [accessConversation] = useAccessConversationMutation();
 
     const handleStartChat = async () => {
         if (!clientData?.clientUserId) {
@@ -39,6 +40,8 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
             );
             return;
         }
+
+        setIsStartingChat(true);
         try {
             const conversation = await accessConversation({
                 receiverId: clientData.clientUserId,
@@ -50,11 +53,14 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
                     id: conversation.data._id,
                     name: clientData.name,
                     avatarUrl: clientData.avatarUrl,
+                    partnerId: clientData.clientUserId,
                     rawConversationData: conversation.data,
                 },
             });
         } catch (error: any) {
             Alert.alert('Error', error?.data?.message || 'Could not start chat.');
+        } finally {
+            setIsStartingChat(false);
         }
     };
 
@@ -94,7 +100,7 @@ const PropertyRequirementsScreen = ({ navigation, route }: any) => {
         }
         return (
             <Image
-                source={{ uri: clientData.avatarUrl }}
+                source={require("../../assets/images/Hot.png")}
                 style={styles.avatar}
                 resizeMode="cover"
             />
@@ -502,7 +508,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-
     requestIcon: {
         width: 18,
         height: 18,

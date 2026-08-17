@@ -21,11 +21,11 @@ import { useSelector } from 'react-redux';
 import { COLORS } from '../../constants/Color';
 import { socketService } from '../../services/socketService';
 import { RootState } from '../../redux/store';
-
 import { useGetMyConversationsQuery, useMarkAllAsReadMutation } from '../../redux/api/chatApi';
 
 interface ConversationItem {
   id: string;
+  partnerId: string; 
   name: string;
   avatarUrl: string;
   lastMessage: string;
@@ -40,7 +40,7 @@ const DEFAULT_AVATAR = require('../../assets/images/profile.png');
 
 const ChatScreen = ({ navigation }: any) => {
   const token = useSelector((state: RootState) => state.auth.token);
-  const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
+  const currentUserId = useSelector((state: RootState) => state.auth.user?.id || (state.auth.user as any)?._id);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpenMenue, setIsOpenMenue] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -64,9 +64,10 @@ const ChatScreen = ({ navigation }: any) => {
 
   const parsedConversations: ConversationItem[] = rawConversations.map((conv: any) => {
     const partner = conv.participants?.find(
-      (p: any) => (p._id || p.id)?.toString() !== currentUserId?.toString()
+      (p: any) => (p._id || p.id || p)?.toString() !== currentUserId?.toString()
     ) || conv.participants?.[0] || {};
 
+    const partnerId = partner._id || partner.id || (typeof partner === 'string' ? partner : '');
     const myUnread = conv.unreadCounts ? conv.unreadCounts[currentUserId] || 0 : 0;
 
     const formattedTime = conv.updatedAt
@@ -75,6 +76,7 @@ const ChatScreen = ({ navigation }: any) => {
 
     return {
       id: conv._id || conv.id,
+      partnerId,
       name: partner.name || 'Client',
       avatarUrl: partner.avatarUrl || '',
       lastMessage: conv.lastMessage || 'No messages yet',
@@ -90,7 +92,6 @@ const ChatScreen = ({ navigation }: any) => {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 🟢 Fix: Immediate and visual feedback for Refetch
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -167,10 +168,7 @@ const ChatScreen = ({ navigation }: any) => {
 
       <View style={styles.headerBar}>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity
-          style={styles.menuBtn}
-          onPress={() => setIsOpenMenue(true)}
-        >
+        <TouchableOpacity style={styles.menuBtn} onPress={() => setIsOpenMenue(true)}>
           <Image
             source={require('../../assets/images/threeDots.png')}
             style={styles.threeDotsIcon}
@@ -179,29 +177,17 @@ const ChatScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
 
-      {/* Dropdown */}
-      <Modal
-        visible={isOpenMenue}
-        transparent
-        animationType="fade"
-      >
-        <TouchableOpacity
-          style={styles.menuOverlay}
-          activeOpacity={1}
-          onPress={() => setIsOpenMenue(false)}
-        >
+      <Modal visible={isOpenMenue} transparent animationType="fade">
+        <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setIsOpenMenue(false)}>
           <View style={styles.menuDropdownCard}>
-            <TouchableOpacity
-              style={styles.menuItemRow}
-              onPress={() => handleMenueAction('MARK_READ')}
-            >
-              <Text style={styles.menuItemText}>✓✓  Mark all as read</Text>
+            <TouchableOpacity style={styles.menuItemRow} onPress={() => handleMenueAction('MARK_READ')}>
+              <Text style={styles.menuItemText}>Mark all as read</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuItemRow, { borderBottomWidth: 0 }]}
               onPress={() => handleMenueAction('REFRESH')}
             >
-              <Text style={styles.menuItemText}>🔄  Refresh Chats</Text>
+              <Text style={styles.menuItemText}>Refresh Chats</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -242,9 +228,7 @@ const ChatScreen = ({ navigation }: any) => {
               colors={[COLORS.orange]}
             />
           }
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No messages found.</Text>
-          }
+          ListEmptyComponent={<Text style={styles.emptyText}>No messages found.</Text>}
         />
       )}
     </SafeAreaView>
@@ -307,10 +291,6 @@ const styles = StyleSheet.create({
     width: 200,
     borderWidth: 1,
     borderColor: '#2C2C30',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
     elevation: 8,
   },
   menuItemRow: {

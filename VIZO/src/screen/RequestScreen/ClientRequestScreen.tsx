@@ -16,7 +16,6 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import { COLORS } from "../../constants/Color";
 import { ClientRequestItem, PropertyIntent } from "../../types/clientRequests";
-// import { clientRequestService } from "../../services/clientRequestService";
 import {
     useGetAllRequestQuery,
     useUpdateRequestStatusMutation,
@@ -25,20 +24,19 @@ import { useAccessConversationMutation } from "../../redux/api/chatApi";
 
 const ClientRequestScreen = ({ navigation }: any) => {
     const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+    const [startingChatId, setStartingChatId] = useState<string | null>(null);
 
     const { data: request = [], isLoading: isloading } = useGetAllRequestQuery(undefined);
     const [updateRequestStatus] = useUpdateRequestStatusMutation();
-    const [accessConversation, { isLoading: isStartingChat }] = useAccessConversationMutation();
-
-
+    const [accessConversation] = useAccessConversationMutation();
 
     const handleStartChat = async (item: ClientRequestItem) => {
         if (!item.clientUserId) {
-            Alert.alert(
-                "Chat unavailable"
-            );
+            Alert.alert("Chat unavailable", "No linked client account found.");
             return;
         }
+        setStartingChatId(item.id);
+
         try {
             const conversation = await accessConversation({
                 receiverId: item.clientUserId,
@@ -50,13 +48,16 @@ const ClientRequestScreen = ({ navigation }: any) => {
                     id: conversation.data._id,
                     name: item.name,
                     avatarUrl: item.avatarUrl,
+                    partnerId: item.clientUserId,
                     rawConversationData: conversation.data,
                 },
             });
         } catch (error: any) {
             Alert.alert('Error', error?.data?.message || 'Could not start chat.');
+        } finally {
+            setStartingChatId(null);
         }
-    }
+    };
 
     const handleAccept = async (id: string) => {
         try {
@@ -116,103 +117,108 @@ const ClientRequestScreen = ({ navigation }: any) => {
         );
     };
 
-    const renderItem = ({ item }: { item: ClientRequestItem }) => (
-        <TouchableOpacity
-            style={styles.cardContainer}
-            activeOpacity={0.9}
-            onPress={() => {
-                if (item.status === "pending") {
-                    navigation.navigate("ClientDetail", { clientData: item });
-                } else {
-                    navigation.navigate("PropertyRequirements", { clientData: item });
-                }
-            }}
-        >
-            <View style={styles.cardHeader}>
-                {renderAvatar(item.avatarUrl)}
+    const renderItem = ({ item }: { item: ClientRequestItem }) => {
+        // 🟢 FIX: Card level check - kya yeh specific card load ho raha hai?
+        const isThisCardLoading = startingChatId === item.id;
 
-                <View style={styles.infoCol}>
-                    <Text style={styles.clientName}>{item.name}</Text>
-                    <View style={styles.intentRow}>
-                        <Text style={styles.intentLabel}>Property Intent: </Text>
-                        {renderIntentBadge(item.intent)}
+        return (
+            <TouchableOpacity
+                style={styles.cardContainer}
+                activeOpacity={0.9}
+                onPress={() => {
+                    if (item.status === "pending") {
+                        navigation.navigate("ClientDetail", { clientData: item });
+                    } else {
+                        navigation.navigate("PropertyRequirements", { clientData: item });
+                    }
+                }}
+            >
+                <View style={styles.cardHeader}>
+                    {renderAvatar(item.avatarUrl)}
+
+                    <View style={styles.infoCol}>
+                        <Text style={styles.clientName}>{item.name}</Text>
+                        <View style={styles.intentRow}>
+                            <Text style={styles.intentLabel}>Property Intent: </Text>
+                            {renderIntentBadge(item.intent)}
+                        </View>
+                        <View style={styles.locationRow}>
+                            <Image
+                                source={require("../../assets/images/location.png")}
+                                style={styles.pinIcon}
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.locationText} numberOfLines={1}>
+                                {item.distance} | {item.address}
+                            </Text>
+                        </View>
                     </View>
-                    <View style={styles.locationRow}>
-                        <Image
-                            source={require("../../assets/images/location.png")}
-                            style={styles.pinIcon}
-                            resizeMode="contain"
-                        />
-                        <Text style={styles.locationText} numberOfLines={1}>
-                            {item.distance} | {item.address}
-                        </Text>
+                </View>
+
+                {activeTab === "pending" ? (
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={[styles.btn, styles.acceptBtn]}
+                            onPress={() => handleAccept(item.id)}
+                            activeOpacity={0.8}
+                        >
+                            <Image
+                                source={require("../../assets/images/Accept.png")}
+                                style={styles.btnIconImage}
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.btnText}>Accept request</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.btn, styles.cancelBtn]}
+                            onPress={() => handleCancel(item.id)}
+                            activeOpacity={0.8}
+                        >
+                            <Image
+                                source={require("../../assets/images/reject.png")}
+                                style={styles.btnIconImage}
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.btnText}>Cancel request</Text>
+                        </TouchableOpacity>
                     </View>
-                </View>
-            </View>
+                ) : (
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={[styles.btn, styles.chatBtn]}
+                            onPress={() => handleStartChat(item)}
+                            activeOpacity={0.8}
+                            disabled={isThisCardLoading}
+                        >
+                            {isThisCardLoading ? (
+                                <ActivityIndicator size="small" color={COLORS.white} />
+                            ) : (
+                                <>
+                                    <Image
+                                        source={require("../../assets/images/messagePro.png")}
+                                        style={styles.btnIconImage}
+                                        resizeMode="contain"
+                                    />
+                                    <Text style={styles.btnText}>Start Chat</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
 
-            {activeTab === "pending" ? (
-                <View style={styles.actionRow}>
-                    <TouchableOpacity
-                        style={[styles.btn, styles.acceptBtn]}
-                        onPress={() => handleAccept(item.id)}
-                        activeOpacity={0.8}
-                    >
-                        <Image
-                            source={require("../../assets/images/Accept.png")}
-                            style={styles.btnIconImage}
-                            resizeMode="contain"
-                        />
-                        <Text style={styles.btnText}>Accept request</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.btn, styles.cancelBtn]}
-                        onPress={() => handleCancel(item.id)}
-                        activeOpacity={0.8}
-                    >
-                        <Image
-                            source={require("../../assets/images/reject.png")}
-                            style={styles.btnIconImage}
-                            resizeMode="contain"
-                        />
-                        <Text style={styles.btnText}>Cancel request</Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <View style={styles.actionRow}>
-                    <TouchableOpacity
-                        style={[styles.btn, styles.chatBtn]}
-                        onPress={() => handleStartChat(item)}
-                        activeOpacity={0.8}
-                        disabled={isStartingChat}
-                    >
-                        {isStartingChat ? (
-                            <ActivityIndicator size="small" color={COLORS.white} />
-                        ) : (
-                            <>
-                                <Image
-                                    source={require("../../assets/images/messagePro.png")}
-                                    style={styles.btnIconImage}
-                                    resizeMode="contain"
-                                />
-                                <Text style={styles.btnText}>Start Chat</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.btn, styles.detailsBtn]}
-                        onPress={() =>
-                            navigation.navigate("PropertyRequirements", { clientData: item })
-                        }
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.detailsBtnText}>View Details</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-        </TouchableOpacity>
-    );
+                        <TouchableOpacity
+                            style={[styles.btn, styles.detailsBtn]}
+                            onPress={() =>
+                                navigation.navigate("PropertyRequirements", { clientData: item })
+                            }
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.detailsBtnText}>View Details</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>

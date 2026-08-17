@@ -15,7 +15,6 @@ import {
   Alert,
   Keyboard,
   Modal,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector } from 'react-redux';
@@ -26,7 +25,6 @@ import { RootState } from '../../redux/store';
 
 import { 
   useGetMessagesQuery, 
-  useSendMessageMutation,
   useClearChatMutation,
   useToggleMuteChatMutation
 } from '../../redux/api/chatApi';
@@ -63,7 +61,7 @@ const formatMessageDateGroup = (dateInput: Date | string) => {
 };
 
 const ChatDetailScreen = ({ navigation, route }: any) => {
-  const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
+  const currentUserId = useSelector((state: RootState) => state.auth.user?.id || (state.auth.user as any)?._id);
   const token = useSelector((state: RootState) => state.auth.token);
   const clientData = route.params?.clientData;
 
@@ -74,9 +72,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
     clientData?.rawConversationData?.participants?.find(
       (p: any) => (p._id || p.id || p)?.toString() !== currentUserId?.toString()
     )?._id ||
-    clientData?.userId ||
-    clientData?.id ||
-    clientData?._id;
+    clientData?.clientUserId;
 
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -88,7 +84,6 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
   const { data: initialHistory = [], isLoading } = useGetMessagesQuery(conversationId, {
     skip: !conversationId,
   });
-  const [sendMessageRest] = useSendMessageMutation();
   const [clearChatApi] = useClearChatMutation();
   const [toggleMuteApi] = useToggleMuteChatMutation();
   const [isSending, setIsSending] = useState(false);
@@ -100,7 +95,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
     const createdDate = m.createdAt ? new Date(m.createdAt) : new Date();
 
     return {
-      id: m._id || m.id,
+      id: m._id || m.id || String(Math.random()),
       senderId,
       text: m.text || '',
       time: createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -149,7 +144,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
       () => {
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        }, 150);
       }
     );
 
@@ -171,18 +166,17 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
     setIsSending(true);
 
     try {
-      const response = await sendMessageRest({ conversationId, text: messageText }).unwrap();
-      const sentMessage = mapServerMessage(response.data);
-      setMessages((prev) => {
-        if (prev.some((msg) => msg.id === sentMessage.id)) return prev;
-        return [...prev, sentMessage];
+      socketService.emit('send_message', {
+        conversationId,
+        text: messageText,
       });
+
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 50);
     } catch (error: any) {
       setInputText(messageText);
-      Alert.alert('Message not sent', error?.data?.message || 'Check your connection and try again.');
+      Alert.alert('Message not sent', 'Check your connection and try again.');
     } finally {
       setIsSending(false);
     }
@@ -213,7 +207,10 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
           callType: 'audio',
           offer: { type: 'offer', sdp: 'vizo_webrtc_audio_offer' },
         });
-        navigation.navigate('AudioCallScreen', { clientData, isIncoming: false });
+        navigation.navigate('AudioCallScreen', { 
+          clientData: { ...clientData, partnerId: targetUserId }, 
+          isIncoming: false 
+        });
         break;
 
       case 'VIDEO_CALL':
@@ -223,7 +220,10 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
           callType: 'video',
           offer: { type: 'offer', sdp: 'vizo_webrtc_video_offer' },
         });
-        navigation.navigate('VideoCallScreen', { clientData, isIncoming: false });
+        navigation.navigate('VideoCallScreen', { 
+          clientData: { ...clientData, partnerId: targetUserId }, 
+          isIncoming: false 
+        });
         break;
 
       case 'VIEW_PROFILE':
@@ -241,7 +241,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         break;
 
       case 'CLEAR_CHAT':
-        Alert.alert('Clear Chat', 'Are you sure you want to delete all messages in this conversation?', [
+        Alert.alert('Clear Chat', 'Are you sure you want to delete all messages', [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Clear',
@@ -330,7 +330,6 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         style={styles.topGlowLayer}
       />
 
-      {/* Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Image
@@ -363,23 +362,23 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
         <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setIsMenuOpen(false)}>
           <View style={styles.detailMenuCard}>
             <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('AUDIO_CALL')}>
-              <Text style={styles.menuItemText}>📞  Audio Call</Text>
+              <Text style={styles.menuItemText}>Audio Call</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('VIDEO_CALL')}>
-              <Text style={styles.menuItemText}>📹  Video Call</Text>
+              <Text style={styles.menuItemText}>Video Call</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('VIEW_PROFILE')}>
-              <Text style={styles.menuItemText}>👤  View Client Profile</Text>
+              <Text style={styles.menuItemText}>View Client Profile</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItemRow} onPress={() => handleDetailMenuAction('MUTE')}>
-              <Text style={styles.menuItemText}>{isMuted ? '🔔  Unmute Chat' : '🔕  Mute Chat'}</Text>
+              <Text style={styles.menuItemText}>{isMuted ? 'Unmute Chat' : 'Mute Chat'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.menuItemRow, { borderBottomWidth: 0 }]} onPress={() => handleDetailMenuAction('CLEAR_CHAT')}>
-              <Text style={[styles.menuItemText, { color: COLORS.red }]}>🗑️  Clear Chat</Text>
+              <Text style={[styles.menuItemText, { color: COLORS.red }]}>Clear Chat</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -388,7 +387,7 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <View style={styles.innerContainer}>
           {isLoading ? (
@@ -405,7 +404,6 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-              onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
             />
           )}
 
@@ -413,14 +411,20 @@ const ChatDetailScreen = ({ navigation, route }: any) => {
             <View style={styles.inputWrapper}>
               <TextInput
                 placeholder="Message..."
-                placeholderTextColor="#66666A"
+                placeholderTextColor="#77777A"
                 value={inputText}
                 onChangeText={handleInputChange}
                 style={styles.textInput}
+                multiline={false}
               />
             </View>
 
-            <TouchableOpacity style={styles.sendGlowBtn} onPress={handleSendMessage} disabled={isSending}>
+            <TouchableOpacity 
+              style={styles.sendGlowBtn} 
+              onPress={handleSendMessage} 
+              disabled={isSending}
+              activeOpacity={0.8}
+            >
               <LinearGradient
                 colors={['#FF1616', '#FF7A00']}
                 start={{ x: 0, y: 0 }}
@@ -458,7 +462,6 @@ const styles = StyleSheet.create({
   },
   innerContainer: {
     flex: 1,
-    justifyContent: 'space-between',
   },
   topGlowLayer: {
     position: 'absolute',
@@ -479,6 +482,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F1F24',
   },
   backBtn: {
     width: 32,
@@ -532,10 +537,6 @@ const styles = StyleSheet.create({
     width: 220,
     borderWidth: 1,
     borderColor: '#2C2C30',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
     elevation: 8,
   },
   menuItemRow: {
@@ -568,6 +569,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     flexGrow: 1,
+    justifyContent: 'flex-end',
   },
   otherBubbleRow: {
     flexDirection: 'row',
@@ -628,15 +630,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.black,
+    paddingVertical: 10,
+    backgroundColor: '#121214',
+    borderTopWidth: 1,
+    borderTopColor: '#1F1F24',
     gap: 10,
   },
   inputWrapper: {
     flex: 1,
     backgroundColor: '#1C1C1E',
-    borderRadius: 12,
-    height: 48,
+    borderRadius: 22,
+    height: 44,
     paddingHorizontal: 16,
     justifyContent: 'center',
     borderWidth: 1,
@@ -645,14 +649,10 @@ const styles = StyleSheet.create({
   textInput: {
     color: COLORS.white,
     fontSize: 14,
+    paddingVertical: 0,
   },
   sendGlowBtn: {
     borderRadius: 22,
-    shadowColor: '#FF3B00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
   },
   sendBtnGradient: {
     width: 44,
