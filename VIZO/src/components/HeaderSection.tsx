@@ -11,6 +11,7 @@ interface HeaderSectionProps {
     isAvailable?: boolean;
     onToggleAvailability?: (value: boolean) => void;
     unreadCount?: number;
+    onSubscriptionPress?: () => void;
 }
 
 const HeaderSection: React.FC<HeaderSectionProps> = ({
@@ -19,6 +20,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     isAvailable: isAvailableProp,
     onToggleAvailability,
     unreadCount = 0,
+    onSubscriptionPress,
 }) => {
     const [localIsAvailable, setLocalIsAvailable] = useState<boolean>(true);
     const isAvailable = isAvailableProp !== undefined ? isAvailableProp : localIsAvailable;
@@ -49,13 +51,19 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
 
     return (
         <View style={styles.container}>
-            <View style={styles.locationPill}>
+            <TouchableOpacity
+                style={styles.locationPill}
+                activeOpacity={0.7}
+                onPress={()=> setIsLocationModalVisible(true)}
+            >
                 <Image
                     source={require("../assets/images/location.png")}
                     style={styles.pinIcon}
                     resizeMode='contain'
                 />
-                <Text style={styles.locationText}>{location}</Text>
+                <Text style={styles.locationText} numberOfLines={1}>
+                    {location}
+                </Text>
                 <TouchableOpacity>
                     <Image
                         source={require('../assets/images/Arrow - Down 3.png')}
@@ -63,7 +71,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                         resizeMode='contain'
                     />
                 </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.switchRow}>
                 <Text style={styles.availableText}>
@@ -86,11 +94,18 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                     style={styles.controlIcon}
                     resizeMode='contain'
                 />
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{unreadCount}</Text>
-                </View>
+                {unreadCount > 0 && (
+                    <View style={styles.badge}>
+                            <Text style={styles.badgeText}>
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </Text>
+                        </View>
+                )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity 
+                style={styles.iconBtn}
+                onPress={onSubscriptionPress}    
+            >
                 <Image
                     source={require('../assets/images/crown.png')}
                     style={styles.controlIcon}
@@ -115,17 +130,18 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginVertical: 15,
-        marginHorizontal:10,
+        marginHorizontal: 10,
     },
     locationPill: {
         flexDirection: 'row',
         alignItems: 'center',
-        // backgroundColor: '#1E1E20',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        flex: 1,
+        maxWidth: '42%',
+        paddingHorizontal: 10,
+        paddingVertical: 7,
         borderRadius: 20,
         borderWidth: 1,
-        // borderColor: COLORS.borderDark,
+        // borderColor: '#2C2C2E',
     },
     pinIcon: {
         width: 14,
@@ -138,6 +154,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '500',
         marginRight: 6,
+        flex: 1,
     },
     downArrow: {
         width: 10,

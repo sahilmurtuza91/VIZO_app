@@ -4,10 +4,10 @@ import Video from 'react-native-video';
 import { useDispatch, useSelector } from 'react-redux';
 import { SplashScreenProps } from "../../navigation/types";
 import { RootState } from '../../redux/store';
-import { logout } from '../../redux/slice/authSlice';
+import { performLogout } from '../../redux/slice/authSlice';
 
 const Spalsh = ({ navigation }: SplashScreenProps) => {
-    const dispatch = useDispatch();
+    const dispatch: any = useDispatch();
     const rememberMe = useSelector((state: RootState) => state.auth.rememberMe);
     const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
     const token = useSelector((state: RootState) => state.auth.token);
@@ -17,7 +17,7 @@ const Spalsh = ({ navigation }: SplashScreenProps) => {
 
     useEffect(() => {
         if (isAuthenticated && !rememberMe) {
-            dispatch(logout());
+            dispatch(performLogout());
         }
     }, []);
 

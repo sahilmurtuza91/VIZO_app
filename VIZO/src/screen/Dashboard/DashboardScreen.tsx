@@ -35,7 +35,7 @@ const isSameDay = (dateString?: string) => {
 };
 
 const DashboardScreen = ({ navigation }: any) => {
-  const { data: profile } = useGetProfileQuery(undefined);
+  const { data: profile, refetch: refetchProfile } = useGetProfileQuery(undefined);
   const [toggleAvailability] = useToggleAvailabilityMutation();
 
   const { data: requests } = useGetAllRequestQuery(undefined);
@@ -66,6 +66,7 @@ const DashboardScreen = ({ navigation }: any) => {
       <HeaderSection
         location={profile?.currentCity || "No location set"}
         onNotificationPress={() => navigation.navigate("NotificationsScreen")}
+        onSubscriptionPress={() => navigation.navigate("SubscriptionPlansScreen")}
         isAvailable={Boolean(profile?.isOnline)}
         onToggleAvailability={(value) => toggleAvailability(value).catch(() => { })}
         unreadCount={unreadCount}

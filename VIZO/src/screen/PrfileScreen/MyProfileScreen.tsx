@@ -22,10 +22,10 @@ import { UserProfile } from '../../types/profile';
 import ProfileMenuCard from '../../components/ProfileMenuCard';
 
 import { useGetProfileQuery, useToggleAvailabilityMutation } from '../../redux/api/profileApi';
-import { logout } from '../../redux/slice/authSlice';
+import { performLogout } from '../../redux/slice/authSlice';
 
 const MyProfileScreen = ({ navigation }: any) => {
-    const dispatch = useDispatch();
+    const dispatch: any = useDispatch();
     const { data: profile, isLoading } = useGetProfileQuery(undefined);
     const [toggleAvailability, { isLoading: isUpdatingStatus }] = useToggleAvailabilityMutation();
 
@@ -44,8 +44,8 @@ const MyProfileScreen = ({ navigation }: any) => {
                 text: 'Log Out',
                 style: 'destructive',
                 onPress: () => {
-                    dispatch(logout());
-                    navigation.navigate("LoginScreen");
+                    dispatch(performLogout());
+                    navigation.replace('LoginScreen');
                 },
             },
         ]);
